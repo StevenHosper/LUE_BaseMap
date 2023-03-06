@@ -433,11 +433,11 @@ class mainModel():
         self.include_percolation   = True
         self.include_groundflow    = True
         ground_water_table = -1.40                                          # The groundwater table height in meters
-        
+        root_path = os.path.dirname(__file__)
         if use_api == False:
             at_work = False
             if at_work:
-                path = "F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/"
+                path = f"{root_path}/"
             else:
                 path = "C:/Users/steven.hosper/Desktop/Mapje Stage/"
         

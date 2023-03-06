@@ -73,8 +73,9 @@ class dataGeneration():
         
         # Set working directory
         at_work = False
+        root_path = os.path.dirname(__file__)
         if at_work:
-            self.path = "F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/data/generated/"   # For at work
+            self.path = f"{root_path}/data/generated/"   # For at work
         else:
             self.path = "C:/Users/steven.hosper/Desktop/Mapje Stage/data/De Wupsel/"                # For at home
         

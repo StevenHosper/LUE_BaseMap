@@ -5,13 +5,14 @@ Created on Mon Mar 6 2023
 @author: steven.hosper
 """
 import datetime
+import os
 
 # Configuration file
 arrayExtent = 5000
 partitionExtent = 1000
 
-# Data and file path
-path = "F:/Projecten intern (2023)/Stage Steven Hosper/Model" 
+# Root path
+path = f"{os.path.dirname(__file__)}" 
 
 # Dates
 startDate = datetime.date(year = 2023, month = 2, day = 23)

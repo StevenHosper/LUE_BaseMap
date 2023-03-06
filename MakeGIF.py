@@ -55,9 +55,7 @@ Usage:
     {command} 
     
 Options:
-    <raster>      Pathname of input GeoTiffs
-    <nr_rasters>  Number of rasters
-    <animation>   Pathname of output animation
+
 """.format(
     command=os.path.basename(sys.argv[0])
 )
@@ -66,13 +64,14 @@ Options:
 def main():
     argv = [arg for arg in sys.argv[1:] if not arg.startswith("--hpx")]
     arguments = docopt.docopt(usage, argv)
+    root_path = os.path.dirname(__file__)
     
     # Implemenet directories for both work and home adress.
     at_work = False
     variable = 'groundwater'
     if at_work:
-        raster_pathname = f'F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/output/{variable}'
-        animation_pathname = f'F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/output/{variable}.gif'
+        raster_pathname = f'{root_path}/output/{variable}'
+        animation_pathname = f'{root_path}/output/{variable}.gif'
     else:
         raster_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{variable}'
         animation_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{variable}.gif'
@@ -87,8 +86,8 @@ def main():
     # Second animation
     variable = 'waterheight'
     if at_work:
-        raster_pathname = f'F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/output/{variable}'
-        animation_pathname = f'F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/output/{variable}.gif'
+        raster_pathname = f'{root_path}/output/{variable}'
+        animation_pathname = f'{root_path}/output/{variable}.gif'
     else:
         raster_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{variable}'
         animation_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{variable}.gif'
