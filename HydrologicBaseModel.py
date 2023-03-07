@@ -19,18 +19,22 @@ import time
 import uuid as uid
 from osgeo import gdal
 
+root_path = os.path.dirname(__file__)
+sys.path.insert(1, root_path)
+import configuration as config
+
 # Timer to add some measure of functionality to the program
 start_time = time.time()
 
 usage = """\
-Calculate the soil loss of an area using the USLE
+Run the main model of the hydrologic base model.
 
 Usage:
-    {command} <array_cells> <partition_cells>
+    {command}
 
 Options:
-    <array_cells>       Size of one side of the array
-    <partition_cells>   Size of one side of the partitions
+    {command} : --hpx:thread = integer;
+                The integer is the amount of cores used during the model run.
 """.format(
     command=os.path.basename(sys.argv[0])
 )
@@ -44,52 +48,42 @@ class mainModel():
             Command line arguments are translate to variables.
             Some useful arrays are created for calculations in the model.
         """
-        
-        # Get access to the APIs for this session
-        username = '__key__'
-        password = 'Cy0BNm8p.vpytC2vYPT9g7OKdgxvqggyV0k9zzJVy'
-        
+
         self.s = requests.Session()
-        self.s.headers = {'username': username,
-                          'password': password,
+        self.s.headers = {'username': config.username,
+                          'password': config.password,
                           'Content-Type': 'application/json',
                           }
-        
-        
-        # Filter out arguments meant for the HPX runtime
-        argv = [arg for arg in sys.argv[1:] if not arg.startswith("--hpx")]
-        
-        # Create arguments and assign them
-        arguments = docopt.docopt(usage, argv)
-        partition_extent = int(arguments["<partition_cells>"])
-        array_extent     = int(arguments["<array_cells>"])
+
+        partitionExtent = config.partitionExtent
+        arrayExtent     = config.arrayExtent
         
         # Create the array and partitioning shape
-        assert array_extent > 0
-        self.array_shape = 2 * (array_extent,)
-        assert partition_extent > 0
-        self.partition_shape = 2 * (partition_extent,)
-        print(f'partition: {self.partition_shape}', f'array: {self.array_shape}')
+        assert arrayExtent > 0
+        self.arrayShape = 2 * (arrayExtent,)
+        assert partitionExtent > 0
+        self.partitionShape = 2 * (partitionExtent,)
+        print(f'partition: {self.partitionShape}', f'array: {self.arrayShape}')
         
         # Create useful single value arrays
         # Zero, for empty cells or unincluded variables
-        self.zero = lfr.create_array(self.array_shape,
-                                     self.partition_shape,
+        self.zero = lfr.create_array(self.arrayShape,
+                                     self.partitionShape,
                                      dtype = np.dtype(np.float32),
                                      fill_value = 0,
                                      )
         
         # One, for additions
-        self.ones = lfr.create_array(self.array_shape,
-                                self.partition_shape,
+        self.ones = lfr.create_array(self.arrayShape,
+                                self.partitionShape,
                                 dtype=np.float32,
                                 fill_value=1,
                                 )
         
         # For the ldd direction being towards the cell itself (pit)
         self.sink = lfr.create_array(
-                                self.array_shape,
-                                self.partition_shape,
+                                self.arrayShape,
+                                self.partitionShape,
                                 dtype = np.dtype(np.uint8),
                                 fill_value = 5,
                                 )
@@ -143,7 +137,7 @@ class mainModel():
         # Assign a memory file to store the api content
         mem_file = f"/vsimem/{uid.uuid4()}.tif"
         gdal.FileFromMemBuffer(mem_file, pull.content)
-        data = lfr.from_gdal(mem_file, self.partition_shape)
+        data = lfr.from_gdal(mem_file, self.partitionShape)
         return data
         
     def get_data(self, path: str, date: datetime.date, variable: str) -> object:
@@ -164,7 +158,7 @@ class mainModel():
         variable_path = path + f'{variable}_{date}.tiff'
         
         # Get the data from the .tif file stored in the path directory
-        data = lfr.from_gdal(variable_path, self.partition_shape)
+        data = lfr.from_gdal(variable_path, self.partitionShape)
         return data
     
     def calculate_infiltration(self, Ks, land_c):
@@ -198,8 +192,8 @@ class mainModel():
         """
         velocity = lfr.atan((head - lfr.downstream(ldd, head))/1)
             
-        channel = lfr.create_array(self.array_shape,
-                                   self.partition_shape,
+        channel = lfr.create_array(self.arrayShape,
+                                   self.partitionShape,
                                    dtype = np.float32,
                                    fill_value = 1,
                                    )
@@ -444,16 +438,16 @@ class mainModel():
         current_date = start_date                                         # Set the current date to the start date
         
         # Load initial variables
-        self.dem  = lfr.from_gdal(path + f'data/De Tol/dem_tol_v2.tiff', self.partition_shape)
-        land_use  = lfr.from_gdal(path + f'data/De Tol/landgebruik_tol.tiff', self.partition_shape)
-        soil_type = lfr.from_gdal(path + f'data/De Tol/bodem_tol.tiff', self.partition_shape)
+        self.dem  = lfr.from_gdal(path + f'data/De Tol/dem_tol_v2.tiff', self.partitionShape)
+        land_use  = lfr.from_gdal(path + f'data/De Tol/landgebruik_tol.tiff', self.partitionShape)
+        soil_type = lfr.from_gdal(path + f'data/De Tol/bodem_tol.tiff', self.partitionShape)
         
         # Create initial ldd
         self.ldd = lfr.d8_flow_direction(self.dem)
         
         # Create the hydraulic conductivity variable
-        Ks       = lfr.create_array(self.array_shape,
-                                    self.partition_shape,
+        Ks       = lfr.create_array(self.arrayShape,
+                                    self.partitionShape,
                                     dtype=np.float32,
                                     fill_value=1,
                                     )
@@ -482,8 +476,8 @@ class mainModel():
                 Ks = lfr.where(soil_type == i, 5.0*10**-2, Ks)           # Hydraulic conductivity in m/day
 
         # Create the land-use coefficient variable
-        land_c   = lfr.create_array(self.array_shape,
-                                    self.partition_shape,
+        land_c   = lfr.create_array(self.arrayShape,
+                                    self.partitionShape,
                                     dtype=np.float32,
                                     fill_value=0.5,
                                     )

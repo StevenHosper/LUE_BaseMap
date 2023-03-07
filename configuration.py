@@ -7,6 +7,10 @@ Created on Mon Mar 6 2023
 import datetime
 import os
 
+# Username / Password for API session
+username = '__key__'
+password = 'Cy0BNm8p.vpytC2vYPT9g7OKdgxvqggyV0k9zzJVy'
+
 # Configuration file
 arrayExtent = 5000
 partitionExtent = 1000
