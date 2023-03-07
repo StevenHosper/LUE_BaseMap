@@ -13,7 +13,7 @@ import uuid as uid
 from osgeo import gdal
 
 class getData():
-    def get_api_data(date: datetime.date, variable: str, session):
+    def getAPIData(date: datetime.date, variable: str, session):
         """
         Summary:
             Get data with the use of an API from the Lizard server of Nelen & Schuurmans
@@ -62,7 +62,7 @@ class getData():
         data = lfr.from_gdal(mem_file, configuration.partitionShape)
         return data
     
-    def get_data(path: str, date: datetime.date, variable: str) -> object:
+    def getData(path: str, date: datetime.date, variable: str) -> object:
         """
         Summary:
             Get data from the APIs to use in the model.
@@ -82,3 +82,28 @@ class getData():
         # Get the data from the .tif file stored in the path directory
         data = lfr.from_gdal(variable_path, configuration.partitionShape)
         return data
+    
+    def getKs(soilType):
+        # Assign K for de Wupsel
+        for i in range(20):
+            if i == 2:
+                Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+            if i == 9:
+                Ks = lfr.where(soilType == i, 3.0*10**0, Ks)           # Hydraulic conductivity in m/day
+            if i == 10:
+                Ks = lfr.where(soilType == i, 4.0*10**0, Ks)           # Hydraulic conductivity in m/day
+            if i == 11:
+                Ks = lfr.where(soilType == i, 4.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+            if i == 12:
+                Ks = lfr.where(soilType == i, 2.5*10**0, Ks)           # Hydraulic conductivity in m/day
+            if i == 13:
+                Ks = lfr.where(soilType == i, 2.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+            if i == 15:
+                Ks = lfr.where(soilType == i, 5.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+            if i == 16:
+                Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+            if i == 19:
+                Ks = lfr.where(soilType == i, 3.0*10**-2, Ks)           # Hydraulic conductivity in m/day
+            else:
+                Ks = lfr.where(soilType == i, 5.0*10**-2, Ks)           # Hydraulic conductivity in m/day
+        return Ks
