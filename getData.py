@@ -77,7 +77,7 @@ class getData():
             data: the data from the tiff file to be used as an lue array
         """
         # Create the full path of the corresponding variable for the current
-        variable_path = path + f'{variable}_{date}.tiff'
+        variable_path = path + f'{variable}_{configuration.arrayExtent}_{date}.tiff'
         
         # Get the data from the .tif file stored in the path directory
         data = lfr.from_gdal(variable_path, configuration.partitionShape)

@@ -24,7 +24,7 @@ demAPI    = "a60ad336-c95b-4fb6-b852-96fc352ee808"
 
 # Configuration file
 # scenarios : ["generated", "De Wupsel", "De Tol"]
-scenario = "De Wupsel"
+scenario = "generated"
 
 if scenario == "De Wupsel" or scenario == "De Tol":
     arrayExtent     = 5000
