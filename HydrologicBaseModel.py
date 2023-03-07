@@ -337,13 +337,11 @@ class mainModel():
         
         # Create the hydraulic conductivity variable
         Ks       = data.get.Ks(soilType, self.ones)
-
+        lfr.to_gdal(Ks, config.path + f'/output/{config.scenario}/Ks.tiff')
+        
         # Create the land-use coefficient variable
         landC   = data.get.landC(landUse, self.ones)
-        
-        # Save the land-use coefficient so it can be checked
         lfr.to_gdal(landC, config.path + f'/output/{config.scenario}/landUse_coefficients.tiff')
-        lfr.to_gdal(Ks, config.path + f'/output/{config.scenario}/Ks.tiff')
         
         # Initialize the static
         self.static(config.startDate, config.path, config.groundWaterTable, Ks, landC, landUse)
