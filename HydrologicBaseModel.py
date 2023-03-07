@@ -150,7 +150,7 @@ class mainModel():
             if config.useAPI:
                 precipitation     = gD.getData.get_api_data(current_date, 'precipitation', self.s)
             else:
-                precipitation     = gD.getData.get_data(f'{config.path}/data/De Wupsel/', current_date, 'precipitation')
+                precipitation     = gD.getData.get_data(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'precipitation')
         else:
             precipitation = self.zero
         
@@ -159,7 +159,7 @@ class mainModel():
             if config.useAPI:
                 pot_evaporation   = gD.getData.get_api_data(current_date, 'potential_evaporation', self.s)
             else:
-                pot_evaporation   = gD.getData.get_data(f'{config.path}/data/De Wupsel/', current_date, 'potential_evaporation')
+                pot_evaporation   = gD.getData.get_data(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'potential_evaporation')
         else:
             pot_evaporation = self.zero
         
@@ -234,7 +234,7 @@ class mainModel():
                 if config.useAPI:
                     precipitation     = gD.getData.get_api_data(current_date, 'precipitation', self.s)
                 else:
-                    precipitation     = gD.getData.get_data(f'{config.path}/data/De Wupsel/', current_date, 'precipitation')
+                    precipitation     = gD.getData.get_data(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'precipitation')
             else:
                 precipitation = self.zero
             
@@ -243,7 +243,7 @@ class mainModel():
                 if config.useAPI:
                     pot_evaporation   = gD.getData.get_api_data(current_date, 'potential_evaporation', self.s)
                 else:
-                    pot_evaporation   = gD.getData.get_data(f'{config.path}/data/De Wupsel/', current_date, 'potential_evaporation')
+                    pot_evaporation   = gD.getData.get_data(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'potential_evaporation')
             else:
                 pot_evaporation = self.zero
             
