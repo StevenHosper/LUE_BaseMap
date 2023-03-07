@@ -23,8 +23,8 @@ endDate   = datetime.date(year = 2023, month = 3, day = 25)
 
 # Include processes
 variables = ['precipitation', 'evaporation', 'infiltration']
-includeEvaporation   = True
 includePrecipitation = True
+includeEvaporation   = True
 includeInfiltration  = True
 includePercolation   = True
 includeGroundFlow    = True

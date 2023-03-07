@@ -189,8 +189,8 @@ class get():
     
     def ieRatio(pot_evaporation, pot_infiltration, ones, zero):
         if configuration.includeEvaporation and configuration.includeInfiltration:
-            i_ratio = lfr.divide(pot_infiltration, lfr.add(pot_evaporation, pot_infiltration))
-            e_ratio = lfr.divide(pot_evaporation, lfr.add(pot_evaporation, pot_infiltration))
+            i_ratio = pot_infiltration / (pot_evaporation + pot_infiltration)
+            e_ratio = pot_evaporation / (pot_evaporation + pot_infiltration)
         elif configuration.includeEvaporation:
             i_ratio = zero
             e_ratio = ones
