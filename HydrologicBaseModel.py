@@ -122,7 +122,7 @@ class mainModel():
         self.height = self.waterheight + self.dem
         
         # Create file with current situation of the water balance
-        variables = [self.waterheight, self.groundWaterHeight]
+        variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight}
         reporting.report.static(current_date, variables, config.output_path)
         return 0
     
@@ -199,10 +199,10 @@ class mainModel():
             # Adjust the concurrent height
             self.height = self.dem + self.waterheight
             
-            # Save the variables to tiff files to a tiff file
-            lfr.to_gdal(self.groundWaterHeight, config.path + f'/output/{config.scenario}/groundwater_{current_date}.tiff')
-            lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/waterheight_{current_date}.tiff')
-            #lfr.to_gdal(self.height, config.path + f'/output/{config.scenario}/surfaceheight_{current_date}.tiff')
+            # Create file with current situation of the water balance
+            variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight}
+            fluxes    = {}
+            reporting.report.dynamic(current_date, variables, fluxes, config.output_path)
         return 0
      
      

@@ -68,7 +68,7 @@ if not useAPI:
 else:
     path = root_path
     
-output_path = path + f'/output/{scenario}'
+output_path = path + f'output/{scenario}/'
     
 # API URLs
 precipAPI = "730d6675-35dd-4a35-aa9b-bfb8155f9ca7"
