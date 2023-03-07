@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Created on Wed Feb 15 10:03:54 2023
+Created on Wed Feb 15 2023
 
 @author: steven.hosper
 """
@@ -22,6 +22,7 @@ from osgeo import gdal
 root_path = os.path.dirname(__file__)
 sys.path.insert(1, root_path)
 import configuration as config
+import getData as gD
 
 # Timer to add some measure of functionality to the program
 start_time = time.time()
@@ -55,38 +56,7 @@ class mainModel():
                           'Content-Type': 'application/json',
                           }
 
-        partitionExtent = config.partitionExtent
-        arrayExtent     = config.arrayExtent
-        
-        # Create the array and partitioning shape
-        assert arrayExtent > 0
-        self.arrayShape = 2 * (arrayExtent,)
-        assert partitionExtent > 0
-        self.partitionShape = 2 * (partitionExtent,)
-        print(f'partition: {self.partitionShape}', f'array: {self.arrayShape}')
-        
-        # Create useful single value arrays
-        # Zero, for empty cells or unincluded variables
-        self.zero = lfr.create_array(self.arrayShape,
-                                     self.partitionShape,
-                                     dtype = np.dtype(np.float32),
-                                     fill_value = 0,
-                                     )
-        
-        # One, for additions
-        self.ones = lfr.create_array(self.arrayShape,
-                                self.partitionShape,
-                                dtype=np.float32,
-                                fill_value=1,
-                                )
-        
-        # For the ldd direction being towards the cell itself (pit)
-        self.sink = lfr.create_array(
-                                self.arrayShape,
-                                self.partitionShape,
-                                dtype = np.dtype(np.uint8),
-                                fill_value = 5,
-                                )
+        print(f'partition: {config.partitionShape}', f'array: {config.arrayShape}')
         
         print("__init__ done")
         
@@ -234,7 +204,7 @@ class mainModel():
             else:
                 precipitation     = self.get_data(f'{path}/data/De Wupsel/', current_date, 'precipitation')
         else:
-            precipitation = self.zero
+            precipitation = gD.getData.zero
         
         # Evaporation
         if self.include_evaporation:
