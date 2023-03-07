@@ -336,30 +336,7 @@ class mainModel():
         self.ldd = lfr.d8_flow_direction(self.dem)
         
         # Create the hydraulic conductivity variable
-        Ks       = self.ones
-        
-        # Assign K for de Wupsel
-        for i in range(20):
-            if i == 2:
-                Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
-            if i == 9:
-                Ks = lfr.where(soilType == i, 3.0*10**0, Ks)           # Hydraulic conductivity in m/day
-            if i == 10:
-                Ks = lfr.where(soilType == i, 4.0*10**0, Ks)           # Hydraulic conductivity in m/day
-            if i == 11:
-                Ks = lfr.where(soilType == i, 4.0*10**-1, Ks)           # Hydraulic conductivity in m/day
-            if i == 12:
-                Ks = lfr.where(soilType == i, 2.5*10**0, Ks)           # Hydraulic conductivity in m/day
-            if i == 13:
-                Ks = lfr.where(soilType == i, 2.0*10**-1, Ks)           # Hydraulic conductivity in m/day
-            if i == 15:
-                Ks = lfr.where(soilType == i, 5.0*10**-1, Ks)           # Hydraulic conductivity in m/day
-            if i == 16:
-                Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
-            if i == 19:
-                Ks = lfr.where(soilType == i, 3.0*10**-2, Ks)           # Hydraulic conductivity in m/day
-            else:
-                Ks = lfr.where(soilType == i, 5.0*10**-2, Ks)           # Hydraulic conductivity in m/day
+        Ks       = gD.getData.getKs(soilType, self.ones)
 
         # Create the land-use coefficient variable
         land_c   = lfr.create_array(config.arrayShape,
