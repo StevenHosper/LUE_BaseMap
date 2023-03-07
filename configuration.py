@@ -15,7 +15,7 @@ useAPI = False
 
 # Configuration file
 # scenarios : ["generated", "De Wupsel", "De Tol"]
-scenario = "De Wupsel"
+scenario = "generated"
 
 # Dates
 startDate = datetime.date(year = 2023, month = 2, day = 23)
@@ -30,7 +30,7 @@ includePercolation   = True
 includeGroundFlow    = True
 
 # Set values
-groundWaterTable = -1.40
+initialWaterTable = 1.30
 resolution       = 1
 
 # Username / Password for API session

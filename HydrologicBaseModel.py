@@ -18,6 +18,7 @@ import sys
 import time
 import configuration as config
 import getData as data
+import MakeGIF
 
 
 # Timer to add some measure of functionality to the program
@@ -79,12 +80,12 @@ class mainModel():
         print("__init__ done")
     
     
-    def static(self, current_date: datetime.date, path: str, hydraulic_head: float, Ks, landC, landUse):
+    def static(self, current_date: datetime.date, path: str, initialWaterTable: float, Ks, landC, landUse):
         # Print the start date for logging purposes
         print(f'The startdate is: {current_date}')
         
         # Set the waterheight so that it matches the elevation head
-        self.waterheight = lfr.where(self.dem < hydraulic_head, hydraulic_head - self.dem, 0)
+        self.waterheight = lfr.where(self.dem < initialWaterTable, initialWaterTable - self.dem, 0)
         self.waterheight = lfr.where(landUse == 51, self.waterheight, 0 )
         
         # Create a groundwater table 
@@ -100,7 +101,7 @@ class mainModel():
         pot_evaporation   = data.get.pot_evaporation(current_date, self.s, self.zero)   
         pot_infiltration  = data.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, self.zero)
         percolation       = data.get.percolation(self.dem, self.groundWaterHeight, Ks, self.zero)
-        i_ratio, e_ratio = data.get.ieRatio(pot_evaporation, pot_infiltration, self.ones, self.zero)
+        i_ratio, e_ratio  = data.get.ieRatio(pot_evaporation, pot_infiltration, self.ones, self.zero)
 
         # Add precipitation to the watertable
         self.waterheight = self.waterheight + precipitation
@@ -227,10 +228,10 @@ class mainModel():
         lfr.to_gdal(landC, config.path + f'/output/{config.scenario}/landUse_coefficients.tiff')
         
         # Initialize the static
-        self.static(config.startDate, config.path, config.groundWaterTable, Ks, landC, landUse)
+        self.static(config.startDate, config.path, config.initialWaterTable, Ks, landC, landUse)
         print("static completed")
         
-        self.iterate(config.startDate, config.endDate, config.path, config.groundWaterTable, Ks, landC, landUse)
+        self.iterate(config.startDate, config.endDate, config.path, config.initialWaterTable, Ks, landC, landUse)
         print("iteration completed")
         return 0
 
@@ -259,5 +260,6 @@ lfr.start_hpx_runtime(cfg)
 if lfr.on_root_locality():
     main = mainModel()
     main.simulate()
+    MakeGIF.main()
     
 print("--- %s seconds ---" % (time.time() - start_time))
