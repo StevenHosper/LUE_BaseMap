@@ -18,9 +18,6 @@ import sys
 import time
 import uuid as uid
 from osgeo import gdal
-
-root_path = os.path.dirname(__file__)
-sys.path.append(root_path)
 import configuration as config
 
 
@@ -59,6 +56,7 @@ class mainModel():
         print(f'partition: {config.partitionShape}', f'array: {config.arrayShape}')
         
         # Create useful single value arrays
+        # TO-DO: Incorporate this somewhere else
         # Zero, for empty cells or unincluded variables
         self.zero = lfr.create_array(config.arrayShape,
                                     config.partitionShape,
@@ -82,7 +80,7 @@ class mainModel():
         print("__init__ done")
         
     
-    def get_api_data(self, date: datetime.date, variable: str):
+    def get_api_data(self, date: datetime.date, variable: str, session):
         """
         Summary:
             Get data with the use of an API from the Lizard server of Nelen & Schuurmans
@@ -122,7 +120,7 @@ class mainModel():
                     },}
 
         # Pull the request from the Lizard server
-        pull = self.s.get(**request)
+        pull = session.get(**request)
         pull.raise_for_status()
         
         # Assign a memory file to store the api content
@@ -221,7 +219,7 @@ class mainModel():
         # Precipitation
         if config.includePrecipitation:
             if use_api:
-                precipitation     = self.get_api_data(current_date, 'precipitation')
+                precipitation     = self.get_api_data(current_date, 'precipitation', self.s)
             else:
                 precipitation     = self.get_data(f'{path}/data/De Wupsel/', current_date, 'precipitation')
         else:
@@ -230,7 +228,7 @@ class mainModel():
         # Evaporation
         if config.includeEvaporation:
             if use_api:
-                pot_evaporation   = self.get_api_data(current_date, 'potential_evaporation')
+                pot_evaporation   = self.get_api_data(current_date, 'potential_evaporation', self.s)
             else:
                 pot_evaporation   = self.get_data(f'{path}/data/De Wupsel/', current_date, 'potential_evaporation')
         else:
@@ -308,7 +306,7 @@ class mainModel():
             # Precipitation
             if config.includePrecipitation:
                 if use_api:
-                    precipitation     = self.get_api_data(current_date, 'precipitation')
+                    precipitation     = self.get_api_data(current_date, 'precipitation', self.s)
                 else:
                     precipitation     = self.get_data(f'{path}/data/De Wupsel/', current_date, 'precipitation')
             else:
@@ -317,7 +315,7 @@ class mainModel():
             # Evaporation
             if config.includeEvaporation:
                 if use_api:
-                    pot_evaporation   = self.get_api_data(current_date, 'potential_evaporation')
+                    pot_evaporation   = self.get_api_data(current_date, 'potential_evaporation', self.s)
                 else:
                     pot_evaporation   = self.get_data(f'{path}/data/De Wupsel/', current_date, 'potential_evaporation')
             else:
@@ -421,13 +419,15 @@ class mainModel():
                 path = f"{root_path}/"
             else:
                 path = "C:/Users/steven.hosper/Desktop/Mapje Stage/"      # Local directory
+        else:
+            path = root_path
         
         current_date = startDate                                         # Set the current date to the start date
         
         # Load initial variables
-        self.dem  = lfr.from_gdal(path + f'data/De Tol/dem_tol_v2.tiff', config.partitionShape)
-        landUse  = lfr.from_gdal(path + f'data/De Tol/landgebruik_tol.tiff', config.partitionShape)
-        soilType = lfr.from_gdal(path + f'data/De Tol/bodem_tol.tiff', config.partitionShape)
+        self.dem  = lfr.from_gdal(path + f'/data/De Tol/dem_tol_v2.tiff', config.partitionShape)
+        landUse  = lfr.from_gdal(path + f'/data/De Tol/landgebruik_tol.tiff', config.partitionShape)
+        soilType = lfr.from_gdal(path + f'/data/De Tol/bodem_tol.tiff', config.partitionShape)
         
         # Create initial ldd
         self.ldd = lfr.d8_flow_direction(self.dem)
@@ -497,8 +497,8 @@ class mainModel():
                 land_c = lfr.where(landUse == i, 0.8, land_c)
         
         # Save the land-use coefficient so it can be checked
-        lfr.to_gdal(land_c, path + f'output/landUse_coefficients.tiff')
-        lfr.to_gdal(Ks, path + f'output/Ks.tiff')
+        lfr.to_gdal(land_c, path + f'/output/landUse_coefficients.tiff')
+        lfr.to_gdal(Ks, path + f'/output/Ks.tiff')
         
         # Initialize the static
         self.static(useAPI, current_date, path, groundWaterTable, Ks, land_c, landUse)
