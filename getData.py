@@ -83,8 +83,9 @@ class getData():
         data = lfr.from_gdal(variable_path, configuration.partitionShape)
         return data
     
-    def getKs(soilType):
+    def getKs(soilType, dummy):
         # Assign K for de Wupsel
+        Ks = dummy
         for i in range(20):
             if i == 2:
                 Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
