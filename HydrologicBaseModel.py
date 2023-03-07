@@ -210,19 +210,19 @@ class mainModel():
         return kinematic
     
     
-    def static(self, use_api: bool, current_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, land_use):
+    def static(self, use_api: bool, current_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, landUse):
         # Print the start date for logging purposes
         print(f'The startdate is: {current_date}')
         
         # Set the waterheight so that it matches the elevation head
         self.waterheight = lfr.where(self.dem < hydraulic_head, hydraulic_head - self.dem, 0)
-        self.waterheight = lfr.where(land_use == 51, self.waterheight, 0 )
+        self.waterheight = lfr.where(landUse == 51, self.waterheight, 0 )
         
         # Create a groundwater table 
         # TO-DO : In the future we would preferable read the groundwater table from measuring stations \
         #         and apply these. However, that is not yet possible.
         self.groundwaterheight = self.dem - 0.1
-        self.groundwaterheight = lfr.where(land_use == 51, self.dem, self.groundwaterheight)
+        self.groundwaterheight = lfr.where(landUse == 51, self.dem, self.groundwaterheight)
         
         lfr.to_gdal(self.waterheight, path + f'/output/initial_water_height.tiff')
 
@@ -301,7 +301,7 @@ class mainModel():
     
     
     
-    def iterate(self, use_api: bool, start_date: datetime.date, end_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, land_use):
+    def iterate(self, use_api: bool, start_date: datetime.date, end_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, landUse):
         
         for i in range(int((end_date - start_date).days)):
             # Print the time to keep track while the program runs
@@ -417,30 +417,26 @@ class mainModel():
     @lfr.runtime_scope 
     def simulate(self):
         # Settings
-        start_date = datetime.date(year = 2023, month = 2, day = 23)
-        end_date = datetime.date(year = 2023, month = 3, day = 25)
-        use_api = False
+        startDate = config.startDate
+        endDate = config.endDate
+        useAPI = config.useAPI
         self.variables = ['precipitation', 'evaporation', 'infiltration']
-        self.include_evaporation   = True
-        self.include_precipitation = True
-        self.include_infiltration  = True
-        self.include_percolation   = True
-        self.include_groundflow    = True
-        ground_water_table = -1.40                                          # The groundwater table height in meters
+        
+        groundWaterTable = config.groundWaterTable                                        # The groundwater table height in meters
+        
         root_path = os.path.dirname(__file__)
-        if use_api == False:
-            at_work = False
-            if at_work:
+        if not config.useAPI:
+            if config.network:
                 path = f"{root_path}/"
             else:
-                path = "C:/Users/steven.hosper/Desktop/Mapje Stage/"
+                path = "C:/Users/steven.hosper/Desktop/Mapje Stage/"      # Local directory
         
-        current_date = start_date                                         # Set the current date to the start date
+        current_date = startDate                                         # Set the current date to the start date
         
         # Load initial variables
         self.dem  = lfr.from_gdal(path + f'data/De Tol/dem_tol_v2.tiff', self.partitionShape)
-        land_use  = lfr.from_gdal(path + f'data/De Tol/landgebruik_tol.tiff', self.partitionShape)
-        soil_type = lfr.from_gdal(path + f'data/De Tol/bodem_tol.tiff', self.partitionShape)
+        landUse  = lfr.from_gdal(path + f'data/De Tol/landgebruik_tol.tiff', self.partitionShape)
+        soilType = lfr.from_gdal(path + f'data/De Tol/bodem_tol.tiff', self.partitionShape)
         
         # Create initial ldd
         self.ldd = lfr.d8_flow_direction(self.dem)
@@ -455,25 +451,25 @@ class mainModel():
         # Assign K for de Wupsel
         for i in range(20):
             if i == 2:
-                Ks = lfr.where(soil_type == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
             if i == 9:
-                Ks = lfr.where(soil_type == i, 3.0*10**0, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 3.0*10**0, Ks)           # Hydraulic conductivity in m/day
             if i == 10:
-                Ks = lfr.where(soil_type == i, 4.0*10**0, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 4.0*10**0, Ks)           # Hydraulic conductivity in m/day
             if i == 11:
-                Ks = lfr.where(soil_type == i, 4.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 4.0*10**-1, Ks)           # Hydraulic conductivity in m/day
             if i == 12:
-                Ks = lfr.where(soil_type == i, 2.5*10**0, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 2.5*10**0, Ks)           # Hydraulic conductivity in m/day
             if i == 13:
-                Ks = lfr.where(soil_type == i, 2.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 2.0*10**-1, Ks)           # Hydraulic conductivity in m/day
             if i == 15:
-                Ks = lfr.where(soil_type == i, 5.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 5.0*10**-1, Ks)           # Hydraulic conductivity in m/day
             if i == 16:
-                Ks = lfr.where(soil_type == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
             if i == 19:
-                Ks = lfr.where(soil_type == i, 3.0*10**-2, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 3.0*10**-2, Ks)           # Hydraulic conductivity in m/day
             else:
-                Ks = lfr.where(soil_type == i, 5.0*10**-2, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 5.0*10**-2, Ks)           # Hydraulic conductivity in m/day
 
         # Create the land-use coefficient variable
         land_c   = lfr.create_array(self.arrayShape,
@@ -492,32 +488,32 @@ class mainModel():
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
         for i in range(255):
             if i in concrete:
-                land_c = lfr.where(land_use == i, 0.001, land_c)
+                land_c = lfr.where(landUse == i, 0.001, land_c)
                 
             elif i in green or 44 > i > 157:                              # Crops are given a multiplier of 1.2 as they also have pore structures \
-                land_c = lfr.where(land_use == i, 1.1, land_c)            # but a different on can be assigned.
+                land_c = lfr.where(landUse == i, 1.1, land_c)            # but a different on can be assigned.
                 
             elif i in water:                                              # Any type of water is assigned 1, as this should have the saturated hydraulic conductivity \
-                land_c = lfr.where(land_use == i, 1.0, land_c)            # as precipitation value. --> However, these places probably have inflow from groundwater.
+                land_c = lfr.where(landUse == i, 1.0, land_c)            # as precipitation value. --> However, these places probably have inflow from groundwater.
             
             elif i in compacted:
-                land_c = lfr.where(land_use == i, 0.7, land_c)
+                land_c = lfr.where(landUse == i, 0.7, land_c)
                 
             elif i in other_road:
-                land_c = lfr.where(land_use == i, 0.3, land_c) 
+                land_c = lfr.where(landUse == i, 0.3, land_c) 
                 
             else:
-                land_c = lfr.where(land_use == i, 0.8, land_c)
+                land_c = lfr.where(landUse == i, 0.8, land_c)
         
         # Save the land-use coefficient so it can be checked
-        lfr.to_gdal(land_c, path + f'output/land_use_coefficients.tiff')
+        lfr.to_gdal(land_c, path + f'output/landUse_coefficients.tiff')
         lfr.to_gdal(Ks, path + f'output/Ks.tiff')
         
         # Initialize the static
-        self.static(use_api, current_date, path, ground_water_table, Ks, land_c, land_use)
+        self.static(useAPI, current_date, path, groundWaterTable, Ks, land_c, landUse)
         print("static completed")
         
-        self.iterate(use_api, start_date, end_date, path, ground_water_table, Ks, land_c, land_use)
+        self.iterate(useAPI, startDate, endDate, path, groundWaterTable, Ks, land_c, landUse)
         print("iteration completed")
         return 0
 

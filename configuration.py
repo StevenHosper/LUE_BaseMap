@@ -7,6 +7,9 @@ Created on Mon Mar 6 2023
 import datetime
 import os
 
+# Use local disk or network disk
+network = False
+
 # Username / Password for API session
 username = '__key__'
 password = 'Cy0BNm8p.vpytC2vYPT9g7OKdgxvqggyV0k9zzJVy'
@@ -22,9 +25,6 @@ path = f"{os.path.dirname(__file__)}"
 # Dates
 startDate = datetime.date(year = 2023, month = 2, day = 23)
 endDate = datetime.date(year = 2023, month = 3, day = 25)
-
-# Data source
-useApi = False
 
 # Include processes
 includeEvaporation = True
