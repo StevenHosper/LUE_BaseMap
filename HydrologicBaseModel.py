@@ -142,7 +142,7 @@ class mainModel():
         self.groundwaterheight = self.dem - 0.1
         self.groundwaterheight = lfr.where(landUse == 51, self.dem, self.groundwaterheight)
         
-        lfr.to_gdal(self.waterheight, config.path + f'/output/initial_water_height.tiff')
+        lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/initial_water_height.tiff')
 
         # Access the data from the directory or the API dependend on the settings
         # Precipitation
@@ -209,9 +209,9 @@ class mainModel():
         self.height = self.waterheight + self.dem
         
         # Create file with current situation of the water balance
-        lfr.to_gdal(self.groundwaterheight, config.path + f'/output/groundwater_{current_date}.tiff')
-        #lfr.to_gdal(self.height, config.path + f'/output/surfaceheight_{current_date}.tiff')
-        lfr.to_gdal(self.waterheight, config.path + f'/output/waterheight_{current_date}.tiff')
+        lfr.to_gdal(self.groundwaterheight, config.path + f'/output/{config.scenario}/groundwater_{current_date}.tiff')
+        #lfr.to_gdal(self.height, config.path + f'/output/{config.scenario}/surfaceheight_{current_date}.tiff')
+        lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/waterheight_{current_date}.tiff')
         return 0
     
     
@@ -319,9 +319,9 @@ class mainModel():
             self.height = self.dem + self.waterheight
             
             # Save the variables to tiff files to a tiff file
-            lfr.to_gdal(self.groundwaterheight, config.path + f'/output/groundwater_{current_date}.tiff')
-            lfr.to_gdal(self.waterheight, config.path + f'/output/waterheight_{current_date}.tiff')
-            #lfr.to_gdal(self.height, config.path + f'/output/surfaceheight_{current_date}.tiff')
+            lfr.to_gdal(self.groundwaterheight, config.path + f'/output/{config.scenario}/groundwater_{current_date}.tiff')
+            lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/waterheight_{current_date}.tiff')
+            #lfr.to_gdal(self.height, config.path + f'/output/{config.scenario}/surfaceheight_{current_date}.tiff')
         return 0
      
      
@@ -396,8 +396,8 @@ class mainModel():
                 land_c = lfr.where(landUse == i, 0.8, land_c)
         
         # Save the land-use coefficient so it can be checked
-        lfr.to_gdal(land_c, config.path + f'/output/landUse_coefficients.tiff')
-        lfr.to_gdal(Ks, config.path + f'/output/Ks.tiff')
+        lfr.to_gdal(land_c, config.path + f'/output/{config.scenario}/landUse_coefficients.tiff')
+        lfr.to_gdal(Ks, config.path + f'/output/{config.scenario}/Ks.tiff')
         
         # Initialize the static
         self.static(config.startDate, config.path, config.groundWaterTable, Ks, land_c, landUse)
