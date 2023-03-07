@@ -133,21 +133,9 @@ class get():
         return land_c
     
     def calculate_infiltration(Ks, landC):
-        """
-        Summary:
-            Calculate the rate of infiltration based on the soil type and the land use
-        
-        Input:
-            Ks [m/day]: saturated hydraulic conductivity
-            land_c [-]: land-use coefficient
-        
-        Returns:
-            infil [m/day]: the amount of water that infiltrates the soil
-        """
-        # For now very basic formula, hydraulic conductivity times land-use coefficient/multiplier
-        pot_infiltration = Ks * landC
-        
-        return pot_infiltration
+        # Simplified version where the saturated hydraulic conductivity
+        # is multiplied with a coefficient based on land-use
+        return Ks * landC
     
     def precipitation(date, session, zero):
         if configuration.includePrecipitation:

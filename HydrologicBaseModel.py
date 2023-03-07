@@ -83,6 +83,7 @@ class mainModel():
         print(f'The startdate is: {current_date}')
         
         # Set the waterheight so that it matches the elevation head
+        # TO-DO: Initialize  waterheight for rivers and water bodies
         self.waterheight = lfr.where(self.dem < initialWaterTable, initialWaterTable - self.dem, 0)
         self.waterheight = lfr.where(landUse == 51, self.waterheight, 0 )
         
@@ -161,9 +162,6 @@ class mainModel():
             else:
                 groundflow = self.zero
             
-            # Helps with regulating the inflow of water
-            upstream_cells = lfr.upstream(ldd, self.ones)
-            
             # Check the difference in dem (as this determines the total height that should be filled to create an equal surface)
             height_difference = self.height - lfr.downstream(ldd, self.height)
             potential_flux = lfr.where(height_difference > self.waterheight, 0.5*self.waterheight, 0.5*height_difference)
@@ -188,8 +186,8 @@ class mainModel():
             evaporation  = lfr.where(self.waterheight >= ie, pot_evaporation, self.waterheight*e_ratio)
             infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
 
-            # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
-            # *Note --> the rain now happens 'first', depending on when the rain falls during the day there might not be time to evaporate, but this is currently not taken into account.
+            # Remove the evaporation and infiltration from the waterheight as it is lost to the 
+            # atmosphere or groundwater.
             self.waterheight = self.waterheight - evaporation - infiltration
             self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
             
