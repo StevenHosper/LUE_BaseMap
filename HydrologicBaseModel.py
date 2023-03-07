@@ -78,38 +78,6 @@ class mainModel():
         
         print("__init__ done")
     
-    def kinematic_test(self, ldd, head, inflow):
-        """
-        Summary:
-            Calculates the flux of material through each cell based on the ldd, inflow, velocity, channel_length and coefficients alpha & beta.
-            
-        Input:
-            ldd: local drain direction map based on the Digital Elevation Map / current map height
-            head: head height of the current situation
-            inflow: currently only the precipitation
-        
-        Returns:
-            kinematic [unit]: the kinematic wave flux for each cell
-        """
-        velocity = lfr.atan((head - lfr.downstream(ldd, head))/1)
-            
-        channel = lfr.create_array(config.arrayShape,
-                                   config.partitionShape,
-                                   dtype = np.float32,
-                                   fill_value = 1,
-                                   )
-        
-        kinematic = lfr.kinematic_wave(
-                ldd,
-                velocity,
-                inflow,
-                1.5,
-                0.6,
-                1.0,
-                channel,
-            )
-        return kinematic
-    
     
     def static(self, current_date: datetime.date, path: str, hydraulic_head: float, Ks, landC, landUse):
         # Print the start date for logging purposes
@@ -228,8 +196,6 @@ class mainModel():
             # Calculate the actual evaporation and infiltration
             evaporation  = lfr.where(self.waterheight >= ie, pot_evaporation, self.waterheight*e_ratio)
             infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
-            
-            kinematic = self.kinematic_test(ldd, self.height, precipitation) 
 
             # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
             # *Note --> the rain now happens 'first', depending on when the rain falls during the day there might not be time to evaporate, but this is currently not taken into account.
