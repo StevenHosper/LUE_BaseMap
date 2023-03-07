@@ -21,6 +21,7 @@ import time
 import uuid as uid
 import pcraster as pcr
 from osgeo import gdal
+import configuration as config
 
 
 # Timer to add some measure of functionality to the program
@@ -58,29 +59,12 @@ class dataGeneration():
                           }
         
         
-        # Filter out arguments meant for the HPX runtime
-        argv = [arg for arg in sys.argv[1:] if not arg.startswith("--hpx")]
-        arguments = docopt.docopt(usage, argv)
-        partition_extent = int(arguments["<partition_cells>"])                  # Assign the command line argument for the partition cells
-        array_extent     = int(arguments["<array_cells>"])                      # Assign the command line argument for the array cells
+        print(f'partition: {config.partitionShape}', f'array: {config.arrayShape}')
         
-        assert array_extent > 0                                                 # Check if non-zero
-        self.array_shape = 2 * (array_extent,)
-        assert partition_extent > 0                                             # Check if non-zero
-        self.partition_shape = 2 * (partition_extent,)
+        self.path = f'{config.path}/data/generated/{config.arrayExtent}/'
         
-        print(f'partition: {self.partition_shape}', f'array: {self.array_shape}')
-        
-        # Set working directory
-        at_work = False
-        root_path = os.path.dirname(__file__)
-        if at_work:
-            self.path = f"{root_path}/data/generated/"   # For at work
-        else:
-            self.path = "C:/Users/steven.hosper/Desktop/Mapje Stage/data/De Wupsel/"                # For at home
-        
-        self.empty = lfr.create_array(self.array_shape,
-                                self.partition_shape,
+        self.empty = lfr.create_array(config.arrayShape,
+                                config.partitionShape,
                                 dtype = np.dtype(np.float32),
                                 fill_value = 0,
                                 )
@@ -93,7 +77,7 @@ class dataGeneration():
         generated data directory.
         """
         dem = lfr.uniform(self.empty, np.float32, 0, 1)
-        lfr.to_gdal(dem, f'{self.path}{output_name}.tiff')
+        lfr.to_gdal(dem, f'{self.path}{output_name}_{config.arrayExtent}.tiff')
         return dem
     
     def ldd_simulation(self, dem, output_name):
@@ -102,7 +86,7 @@ class dataGeneration():
         data directory.
         """
         ldd = lfr.d8_flow_direction(dem)
-        lfr.to_gdal(ldd, f'{self.path}{output_name}.tiff')
+        lfr.to_gdal(ldd, f'{self.path}{output_name}_{config.arrayExtent}.tiff')
         return ldd 
      
     def initialize_raincells(self):
@@ -172,8 +156,8 @@ class dataGeneration():
         saturated_vapor_pressure = 6.108*math.e**((17.27*temperature)/(temperature + K))        # calculate saturated vapor pressure
         evaporation = k * 0.165 * 216.7 * N * (saturated_vapor_pressure / (temperature + K))    # calculate the evaporation rate in mm / day
         evaporation = evaporation / 1000                                                        # convert to m / day
-        evaporation = lfr.create_array(self.array_shape,
-                                       self.partition_shape,
+        evaporation = lfr.create_array(config.arrayShape,
+                                       config.partitionShape,
                                        dtype = np.float32,
                                        fill_value = np.float32(evaporation),
                                        )
@@ -207,66 +191,33 @@ class dataGeneration():
             if simulate_rain:
                 if i < 5:
                     rain = self.precipitation_simulation(raincells)
-                    lfr.to_gdal(rain, f'{self.path}precipitation_{date}.tiff')
+                    lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
                 elif 12 > i > 8:
                     rain = self.precipitation_simulation(raincells)
-                    lfr.to_gdal(rain, f'{self.path}precipitation_{date}.tiff')
+                    lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
                 elif 23 > i > 18:
                     rain = self.precipitation_simulation(raincells)
-                    lfr.to_gdal(rain, f'{self.path}precipitation_{date}.tiff')
+                    lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
                 else:
                     rain = self.empty
-                    lfr.to_gdal(rain, f'{self.path}precipitation_{date}.tiff')
+                    lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
             
             # Temperature and evaporation generation per day
             if simulate_evap:
                 temperature = self.temp_simulation(temperature)
-                temperature_2d = lfr.create_array(self.array_shape,
-                                           self.partition_shape,
+                temperature_2d = lfr.create_array(config.arrayShape,
+                                           config.partitionShape,
                                            dtype = np.float32,
                                            fill_value = temperature)
-                lfr.to_gdal(temperature_2d, f'{self.path}temperature_{date}.tiff')
+                lfr.to_gdal(temperature_2d, f'{self.path}temperature_{config.arrayExtent}_{date}.tiff')
                 
                 evaporation = self.pet_Hamon(temperature, date)
-                lfr.to_gdal(evaporation, f'{self.path}potential_evaporation_{date}.tiff')
+                lfr.to_gdal(evaporation, f'{self.path}potential_evaporation_{config.arrayExtent}_{date}.tiff')
             
             # To the next day!
             date = date + datetime.timedelta(days=1)
         
         return 0
-    
-    @lfr.runtime_scope 
-    def run_test(self):
-        test_kinematic = True
-        array_shape = (1000, 1000)
-        partition_shape = (1000, 1000)
-        direction = 1
-        alpha = 1.5
-        beta = 0.6
-        time_step_duration = 10.0
-        
-        
-        flow_direction = lfr.create_array(
-            array_shape, partition_shape, np.uint8, direction
-        )
-
-        if test_kinematic:
-            for dtype in [np.float32]:
-                discharge      = lfr.create_array(array_shape, partition_shape, dtype, 5)
-                inflow         = lfr.create_array(array_shape, partition_shape, dtype, 1)
-                channel_length = lfr.create_array(array_shape, partition_shape, dtype, 1)
-
-                test = lfr.kinematic_wave(
-                    flow_direction,
-                    discharge,
-                    inflow,
-                    alpha,
-                    beta,
-                    time_step_duration,
-                    channel_length,
-                )
-            
-            lfr.to_gdal(test, f'{self.path}kinematic.tiff')
 
 
 # Initialize HPX runtime and run model, on the root locality -------------------
@@ -293,6 +244,5 @@ lfr.start_hpx_runtime(cfg)
 if __name__ == "__main__":
     main = dataGeneration()
     main.simulate()
-    #main.run_test()
     
 print("--- %s seconds ---" % (time.time() - start_time))
