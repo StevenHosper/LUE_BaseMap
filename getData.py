@@ -131,3 +131,61 @@ class get():
             else:
                 land_c = lfr.where(landUse == i, 0.8, land_c)
         return land_c
+    
+    def calculate_infiltration(Ks, land_c):
+        """
+        Summary:
+            Calculate the rate of infiltration based on the soil type and the land use
+        
+        Input:
+            Ks [m/day]: saturated hydraulic conductivity
+            land_c [-]: land-use coefficient
+        
+        Returns:
+            infil [m/day]: the amount of water that infiltrates the soil
+        """
+        # For now very basic formula, hydraulic conductivity times land-use coefficient/multiplier
+        infil = lfr.multiply(Ks, land_c)
+        return infil
+    
+    def precipitation(date, session, zero):
+        if configuration.includePrecipitation:
+            if configuration.useAPI:
+                precipitation  = get.apiTemporal(date, 'precipitation', session)
+            else:
+                precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
+        else:
+            precipitation = zero
+        return precipitation
+    
+    def pot_evaporation(date, session, zero):
+        # Evaporation
+        if configuration.includeEvaporation:
+            if configuration.useAPI:
+                pot_evaporation   = get.apiTemporal(date, 'potential_evaporation', session)
+            else:
+                pot_evaporation   = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'potential_evaporation')
+        else:
+            pot_evaporation = zero
+        return pot_evaporation
+    
+    def infiltration(dem, groundWaterHeight, Ks, land_c, zero):
+        if configuration.includeInfiltration:
+            pot_infiltration = get.calculate_infiltration(Ks, land_c)
+            pot_infiltration = lfr.where((dem - groundWaterHeight) < pot_infiltration, \
+                                          dem - groundWaterHeight, pot_infiltration)
+        else:
+            pot_infiltration = zero
+        return pot_infiltration
+    
+    def percolation(dem, groundWaterHeight, Ks, zero):
+        if configuration.includePercolation:
+            percolation = lfr.where(dem < 0, zero, \
+                                    Ks * 0.3 * ((groundWaterHeight - 0.5 * dem) / dem))  # If the dem is negative, there is no percolation
+            percolation = lfr.where(percolation < 0, zero, percolation)                            # If the percolation is negative, there is no percolation
+        else:
+            percolation = zero
+        return percolation
+    
+    def groundFlow():
+        pass
