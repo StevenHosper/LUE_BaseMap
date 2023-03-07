@@ -77,23 +77,6 @@ class mainModel():
                                     )
         
         print("__init__ done")
-        
-    
-    def calculate_infiltration(self, Ks, land_c):
-        """
-        Summary:
-            Calculate the rate of infiltration based on the soil type and the land use
-        
-        Input:
-            Ks [m/day]: saturated hydraulic conductivity
-            land_c [-]: land-use coefficient
-        
-        Returns:
-            infil [m/day]: the amount of water that infiltrates the soil
-        """
-        # For now very basic formula, hydraulic conductivity times land-use coefficient/multiplier
-        infil = lfr.multiply(Ks, land_c)
-        return infil
     
     def kinematic_test(self, ldd, head, inflow):
         """
@@ -128,7 +111,7 @@ class mainModel():
         return kinematic
     
     
-    def static(self, current_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, landUse):
+    def static(self, current_date: datetime.date, path: str, hydraulic_head: float, Ks, landC, landUse):
         # Print the start date for logging purposes
         print(f'The startdate is: {current_date}')
         
@@ -139,47 +122,17 @@ class mainModel():
         # Create a groundwater table 
         # TO-DO : In the future we would preferable read the groundwater table from measuring stations \
         #         and apply these. However, that is not yet possible.
-        self.groundwaterheight = self.dem - 0.1
-        self.groundwaterheight = lfr.where(landUse == 51, self.dem, self.groundwaterheight)
+        self.groundWaterHeight = self.dem - 0.1
+        self.groundWaterHeight = lfr.where(landUse == 51, self.dem, self.groundWaterHeight)
         
         lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/initial_water_height.tiff')
 
         # Access the data from the directory or the API dependend on the settings
-        # Precipitation
-        if config.includePrecipitation:
-            if config.useAPI:
-                precipitation     = data.get.apiTemporal(current_date, 'precipitation', self.s)
-            else:
-                precipitation     = data.get.localTemporal(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'precipitation')
-        else:
-            precipitation = self.zero
-        
-        # Evaporation
-        if config.includeEvaporation:
-            if config.useAPI:
-                pot_evaporation   = data.get.apiTemporal(current_date, 'potential_evaporation', self.s)
-            else:
-                pot_evaporation   = data.get.localTemporal(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'potential_evaporation')
-        else:
-            pot_evaporation = self.zero
-        
-        
-        # Calculate the infiltration rate
-        if config.includeInfiltration:
-            pot_infiltration = self.calculate_infiltration(Ks, land_c)
-            pot_infiltration = lfr.where((self.dem - self.groundwaterheight) < pot_infiltration, \
-                                         self.dem - self.groundwaterheight, pot_infiltration)
-        else:
-            pot_infiltration = self.zero
-            
-        # Calculate the percolation --> For now just a small percentage of Ks
-        if config.includePercolation:
-            percolation = lfr.where(self.dem < 0, self.zero, \
-                                    Ks * 0.3 * ((self.groundwaterheight - 0.5 * self.dem) / self.dem))  # If the dem is negative, there is no percolation
-            percolation = lfr.where(percolation < 0, self.zero, percolation)                            # If the percolation is negative, there is no percolation
-        else:
-            percolation = self.zero
-            
+        precipitation     = data.get.precipitation(current_date, self.s, self.zero)
+        pot_evaporation   = data.get.pot_evaporation(current_date, self.s, self.zero)   
+        pot_infiltration  = data.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, self.zero)
+        percolation       = data.get.percolation(self.dem, self.groundWaterHeight, Ks, self.zero)
+
         # Ratio of evaporation compared to infiltration
         if config.includeEvaporation and config.includeInfiltration:
             i_ratio = lfr.divide(pot_infiltration, lfr.add(pot_evaporation, pot_infiltration))
@@ -201,7 +154,7 @@ class mainModel():
         # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
         # *Note --> the rain now happens 'first', depending on when the rain falls during the day there might not be time to evaporate, but this is currently not taken into account.
         self.waterheight = self.waterheight - evaporation - infiltration
-        self.groundwaterheight = self.groundwaterheight + infiltration - percolation
+        self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
         
         # Make sure the waterheight is not below zero as this is not possible.
         # There can be no evaporation without water.
@@ -209,14 +162,14 @@ class mainModel():
         self.height = self.waterheight + self.dem
         
         # Create file with current situation of the water balance
-        lfr.to_gdal(self.groundwaterheight, config.path + f'/output/{config.scenario}/groundwater_{current_date}.tiff')
+        lfr.to_gdal(self.groundWaterHeight, config.path + f'/output/{config.scenario}/groundwater_{current_date}.tiff')
         #lfr.to_gdal(self.height, config.path + f'/output/{config.scenario}/surfaceheight_{current_date}.tiff')
         lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/waterheight_{current_date}.tiff')
         return 0
     
     
 
-    def iterate(self, start_date: datetime.date, end_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, landUse):
+    def iterate(self, start_date: datetime.date, end_date: datetime.date, path: str, hydraulic_head: float, Ks, landC, landUse):
         
         for i in range(int((end_date - start_date).days)):
             # Print the time to keep track while the program runs
@@ -225,36 +178,15 @@ class mainModel():
             
             # Recalculate if the water should still flow in the same direction
             ldd = lfr.d8_flow_direction(self.height)
-            groundhead = self.groundwaterheight + self.waterheight
+            groundhead = self.groundWaterHeight + self.waterheight
             groundldd = lfr.d8_flow_direction(groundhead)
             
             # Access the data from the directory or the API dependend on the settings
-            # Precipitation
-            if config.includePrecipitation:
-                if config.useAPI:
-                    precipitation     = data.get.apiTemporal(current_date, 'precipitation', self.s)
-                else:
-                    precipitation     = data.get.localTemporal(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'precipitation')
-            else:
-                precipitation = self.zero
+            precipitation     = data.get.precipitation(current_date, self.s, self.zero)
+            pot_evaporation   = data.get.pot_evaporation(current_date, self.s, self.zero)
+            pot_infiltration  = data.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, self.zero)
+            percolation       = data.get.percolation(self.dem, self.groundWaterHeight, Ks, self.zero)
             
-            # Evaporation
-            if config.includeEvaporation:
-                if config.useAPI:
-                    pot_evaporation   = data.get.apiTemporal(current_date, 'potential_evaporation', self.s)
-                else:
-                    pot_evaporation   = data.get.localTemporal(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'potential_evaporation')
-            else:
-                pot_evaporation = self.zero
-            
-            
-            # Calculate the infiltration rate
-            if config.includeInfiltration:
-                pot_infiltration = self.calculate_infiltration(Ks, land_c)
-                pot_infiltration = lfr.where((self.dem - self.groundwaterheight) < pot_infiltration, \
-                                         self.dem - self.groundwaterheight, pot_infiltration)
-            else:
-                pot_infiltration = self.zero
             
             # Ratio of evaporation compared to infiltration
             if config.includeEvaporation and config.includeInfiltration:
@@ -263,14 +195,6 @@ class mainModel():
             else:
                 i_ratio = self.zero
                 e_ratio = self.zero
-
-            # Calculate the percolation --> For now just a small percentage of Ks
-            if config.includePercolation:
-                percolation = lfr.where(self.dem <= 0, self.zero, \
-                                        Ks * 0.3 * ((self.groundwaterheight - 0.5 * self.dem) / self.dem))  # If the dem is negative, there is no percolation
-                percolation = lfr.where(percolation < 0, self.zero, percolation)                            # If the percolation is negative, there is no percolation
-            else:
-                percolation = self.zero
             
             # Calculate the groundwater flow
             if config.includeGroundFlow:
@@ -288,12 +212,12 @@ class mainModel():
             
             # ROUTING
             self.waterheight = self.waterheight + lfr.upstream(ldd, flux) - flux
-            self.groundwaterheight = self.groundwaterheight + lfr.upstream(groundldd, groundflow) - groundflow
+            self.groundWaterHeight = self.groundWaterHeight + lfr.upstream(groundldd, groundflow) - groundflow
             
             # The excess groundwater seeps upwards out of the soil
-            groundwatersurplus = self.groundwaterheight - self.dem
-            self.groundwaterheight = self.groundwaterheight - groundwatersurplus
-            self.waterheight = self.waterheight + groundwatersurplus
+            groundWaterSurplus = self.groundWaterHeight - self.dem
+            self.groundwaterheight = self.groundWaterHeight - groundWaterSurplus
+            self.waterheight = self.waterheight + groundWaterSurplus
             
             # Add precipitation to the watertable
             self.waterheight = self.waterheight + precipitation
@@ -310,7 +234,7 @@ class mainModel():
             # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
             # *Note --> the rain now happens 'first', depending on when the rain falls during the day there might not be time to evaporate, but this is currently not taken into account.
             self.waterheight = self.waterheight - evaporation - infiltration
-            self.groundwaterheight = self.groundwaterheight + infiltration - percolation
+            self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
             
             # Waterheight can never be lower than zero.
             self.waterheight = lfr.where(self.waterheight < self.zero, self.zero, self.waterheight)
@@ -319,7 +243,7 @@ class mainModel():
             self.height = self.dem + self.waterheight
             
             # Save the variables to tiff files to a tiff file
-            lfr.to_gdal(self.groundwaterheight, config.path + f'/output/{config.scenario}/groundwater_{current_date}.tiff')
+            lfr.to_gdal(self.groundWaterHeight, config.path + f'/output/{config.scenario}/groundwater_{current_date}.tiff')
             lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/waterheight_{current_date}.tiff')
             #lfr.to_gdal(self.height, config.path + f'/output/{config.scenario}/surfaceheight_{current_date}.tiff')
         return 0
