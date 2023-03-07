@@ -16,7 +16,13 @@ password = 'Cy0BNm8p.vpytC2vYPT9g7OKdgxvqggyV0k9zzJVy'
 
 # Configuration file
 arrayExtent     = 5000
+assert arrayExtent > 0
+arrayShape      = 2 * (arrayExtent,)
+
 partitionExtent = 1000
+assert partitionExtent > 0
+partitionShape  = 2 * (partitionExtent,)
+
 resolution      = 1
 
 # Root path
