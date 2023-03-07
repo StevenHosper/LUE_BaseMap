@@ -106,9 +106,9 @@ class mainModel():
         dates = f'{date}T11:00:00Z'
         
         # The different variables available with their corresponding Lizard rasters
-        urls = {'precipitation': "730d6675-35dd-4a35-aa9b-bfb8155f9ca7", \
-                'evaporation'  : "e262dc03-f12b-4082-a4f4-7d0534e31fa4",
-                'dem'          : "a60ad336-c95b-4fb6-b852-96fc352ee808"
+        urls = {'precipitation': config.precipAPI, \
+                'evaporation'  : config.evapAPI,
+                'dem'          : config.demAPI
                 }
         
         url = f'https://demo.lizard.net/api/v4/rasters/{urls[variable]}/data/'
@@ -120,11 +120,11 @@ class mainModel():
         request = {
                     "url": url,
                     "params":{
-                       "cellsize": 100,
+                       "cellsize": config.resolution,
                        "format": "geotiff",
                        "bbox": '3.330044347435246,50.723122219626666,7.278104205075899,53.80454395165623',          # bbox of the area of interest in coordinates
-                       "width": 1000,
-                       "height": 1000,
+                       "width": config.arrayExtent,
+                       "height": config.arrayExtent,
                        "srs": "EPSG:4326",
                        "target_srs": "EPSG:28992",
                        "start": dates,                                                                              # time
