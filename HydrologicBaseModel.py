@@ -20,9 +20,9 @@ import uuid as uid
 from osgeo import gdal
 
 root_path = os.path.dirname(__file__)
-sys.path.insert(1, root_path)
+sys.path.append(root_path)
 import configuration as config
-import getData as gD
+
 
 # Timer to add some measure of functionality to the program
 start_time = time.time()
@@ -57,6 +57,27 @@ class mainModel():
                           }
 
         print(f'partition: {config.partitionShape}', f'array: {config.arrayShape}')
+        
+        # Create useful single value arrays
+        # Zero, for empty cells or unincluded variables
+        self.zero = lfr.create_array(config.arrayShape,
+                                    config.partitionShape,
+                                    dtype = np.dtype(np.float32),
+                                    fill_value = 0,
+                                    )
+        # One, for additions
+        self.ones = lfr.create_array(config.arrayShape,
+                                    config.partitionShape,
+                                    dtype=np.float32,
+                                    fill_value=1,
+                                    )
+                
+        # For the ldd direction being towards the cell itself (pit)
+        self.sink = lfr.create_array(config.arrayShape,
+                                    config.partitionShape,
+                                    dtype = np.dtype(np.uint8),
+                                    fill_value = 5,
+                                    )
         
         print("__init__ done")
         
@@ -107,7 +128,7 @@ class mainModel():
         # Assign a memory file to store the api content
         mem_file = f"/vsimem/{uid.uuid4()}.tif"
         gdal.FileFromMemBuffer(mem_file, pull.content)
-        data = lfr.from_gdal(mem_file, self.partitionShape)
+        data = lfr.from_gdal(mem_file, config.partitionShape)
         return data
         
     def get_data(self, path: str, date: datetime.date, variable: str) -> object:
@@ -128,7 +149,7 @@ class mainModel():
         variable_path = path + f'{variable}_{date}.tiff'
         
         # Get the data from the .tif file stored in the path directory
-        data = lfr.from_gdal(variable_path, self.partitionShape)
+        data = lfr.from_gdal(variable_path, config.partitionShape)
         return data
     
     def calculate_infiltration(self, Ks, land_c):
@@ -162,8 +183,8 @@ class mainModel():
         """
         velocity = lfr.atan((head - lfr.downstream(ldd, head))/1)
             
-        channel = lfr.create_array(self.arrayShape,
-                                   self.partitionShape,
+        channel = lfr.create_array(config.arrayShape,
+                                   config.partitionShape,
                                    dtype = np.float32,
                                    fill_value = 1,
                                    )
@@ -198,7 +219,7 @@ class mainModel():
 
         # Access the data from the directory or the API dependend on the settings
         # Precipitation
-        if self.include_precipitation:
+        if config.includePrecipitation:
             if use_api:
                 precipitation     = self.get_api_data(current_date, 'precipitation')
             else:
@@ -207,7 +228,7 @@ class mainModel():
             precipitation = gD.getData.zero
         
         # Evaporation
-        if self.include_evaporation:
+        if config.includeEvaporation:
             if use_api:
                 pot_evaporation   = self.get_api_data(current_date, 'potential_evaporation')
             else:
@@ -217,7 +238,7 @@ class mainModel():
         
         
         # Calculate the infiltration rate
-        if self.include_infiltration:
+        if config.includeInfiltration:
             pot_infiltration = self.calculate_infiltration(Ks, land_c)
             pot_infiltration = lfr.where((self.dem - self.groundwaterheight) < pot_infiltration, \
                                          self.dem - self.groundwaterheight, pot_infiltration)
@@ -225,7 +246,7 @@ class mainModel():
             pot_infiltration = self.zero
             
         # Calculate the percolation --> For now just a small percentage of Ks
-        if self.include_percolation:
+        if config.includePercolation:
             percolation = lfr.where(self.dem < 0, self.zero, \
                                     Ks * 0.3 * ((self.groundwaterheight - 0.5 * self.dem) / self.dem))  # If the dem is negative, there is no percolation
             percolation = lfr.where(percolation < 0, self.zero, percolation)                            # If the percolation is negative, there is no percolation
@@ -233,7 +254,7 @@ class mainModel():
             percolation = self.zero
             
         # Ratio of evaporation compared to infiltration
-        if self.include_evaporation and self.include_infiltration:
+        if config.includeEvaporation and config.includeInfiltration:
             i_ratio = lfr.divide(pot_infiltration, lfr.add(pot_evaporation, pot_infiltration))
             e_ratio = lfr.divide(pot_evaporation, lfr.add(pot_evaporation, pot_infiltration))
         else:
@@ -285,7 +306,7 @@ class mainModel():
             
             # Access the data from the directory or the API dependend on the settings
             # Precipitation
-            if self.include_precipitation:
+            if config.includePrecipitation:
                 if use_api:
                     precipitation     = self.get_api_data(current_date, 'precipitation')
                 else:
@@ -294,7 +315,7 @@ class mainModel():
                 precipitation = self.zero
             
             # Evaporation
-            if self.include_evaporation:
+            if config.includeEvaporation:
                 if use_api:
                     pot_evaporation   = self.get_api_data(current_date, 'potential_evaporation')
                 else:
@@ -304,7 +325,7 @@ class mainModel():
             
             
             # Calculate the infiltration rate
-            if self.include_infiltration:
+            if config.includeInfiltration:
                 pot_infiltration = self.calculate_infiltration(Ks, land_c)
                 pot_infiltration = lfr.where((self.dem - self.groundwaterheight) < pot_infiltration, \
                                          self.dem - self.groundwaterheight, pot_infiltration)
@@ -312,7 +333,7 @@ class mainModel():
                 pot_infiltration = self.zero
             
             # Ratio of evaporation compared to infiltration
-            if self.include_evaporation and self.include_infiltration:
+            if config.includeEvaporation and config.includeInfiltration:
                 i_ratio = lfr.divide(pot_infiltration, lfr.add(pot_evaporation, pot_infiltration))
                 e_ratio = lfr.divide(pot_evaporation, lfr.add(pot_evaporation, pot_infiltration))
             else:
@@ -320,7 +341,7 @@ class mainModel():
                 e_ratio = self.zero
 
             # Calculate the percolation --> For now just a small percentage of Ks
-            if self.include_percolation:
+            if config.includePercolation:
                 percolation = lfr.where(self.dem <= 0, self.zero, \
                                         Ks * 0.3 * ((self.groundwaterheight - 0.5 * self.dem) / self.dem))  # If the dem is negative, there is no percolation
                 percolation = lfr.where(percolation < 0, self.zero, percolation)                            # If the percolation is negative, there is no percolation
@@ -328,7 +349,7 @@ class mainModel():
                 percolation = self.zero
             
             # Calculate the groundwater flow
-            if self.include_groundflow:
+            if config.includeGroundFlow:
                 groundflow = Ks * (groundhead - lfr.downstream(groundldd, groundhead))                               # Q = k * i * A
             else:
                 groundflow = self.zero
@@ -404,16 +425,16 @@ class mainModel():
         current_date = startDate                                         # Set the current date to the start date
         
         # Load initial variables
-        self.dem  = lfr.from_gdal(path + f'data/De Tol/dem_tol_v2.tiff', self.partitionShape)
-        landUse  = lfr.from_gdal(path + f'data/De Tol/landgebruik_tol.tiff', self.partitionShape)
-        soilType = lfr.from_gdal(path + f'data/De Tol/bodem_tol.tiff', self.partitionShape)
+        self.dem  = lfr.from_gdal(path + f'data/De Tol/dem_tol_v2.tiff', config.partitionShape)
+        landUse  = lfr.from_gdal(path + f'data/De Tol/landgebruik_tol.tiff', config.partitionShape)
+        soilType = lfr.from_gdal(path + f'data/De Tol/bodem_tol.tiff', config.partitionShape)
         
         # Create initial ldd
         self.ldd = lfr.d8_flow_direction(self.dem)
         
         # Create the hydraulic conductivity variable
-        Ks       = lfr.create_array(self.arrayShape,
-                                    self.partitionShape,
+        Ks       = lfr.create_array(config.arrayShape,
+                                    config.partitionShape,
                                     dtype=np.float32,
                                     fill_value=1,
                                     )
@@ -442,8 +463,8 @@ class mainModel():
                 Ks = lfr.where(soilType == i, 5.0*10**-2, Ks)           # Hydraulic conductivity in m/day
 
         # Create the land-use coefficient variable
-        land_c   = lfr.create_array(self.arrayShape,
-                                    self.partitionShape,
+        land_c   = lfr.create_array(config.arrayShape,
+                                    config.partitionShape,
                                     dtype=np.float32,
                                     fill_value=0.5,
                                     )
