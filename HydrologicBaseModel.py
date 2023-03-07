@@ -100,15 +100,8 @@ class mainModel():
         pot_evaporation   = data.get.pot_evaporation(current_date, self.s, self.zero)   
         pot_infiltration  = data.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, self.zero)
         percolation       = data.get.percolation(self.dem, self.groundWaterHeight, Ks, self.zero)
+        i_ratio, e_ratio = data.get.ieRatio(pot_evaporation, pot_infiltration, self.ones, self.zero)
 
-        # Ratio of evaporation compared to infiltration
-        if config.includeEvaporation and config.includeInfiltration:
-            i_ratio = lfr.divide(pot_infiltration, lfr.add(pot_evaporation, pot_infiltration))
-            e_ratio = lfr.divide(pot_evaporation, lfr.add(pot_evaporation, pot_infiltration))
-        else:
-            i_ratio = self.zero
-            e_ratio = self.zero
-        
         # Add precipitation to the watertable
         self.waterheight = self.waterheight + precipitation
 

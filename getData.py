@@ -187,5 +187,20 @@ class get():
             percolation = zero
         return percolation
     
+    def ieRatio(pot_evaporation, pot_infiltration, ones, zero):
+        if configuration.includeEvaporation and configuration.includeInfiltration:
+            i_ratio = lfr.divide(pot_infiltration, lfr.add(pot_evaporation, pot_infiltration))
+            e_ratio = lfr.divide(pot_evaporation, lfr.add(pot_evaporation, pot_infiltration))
+        elif configuration.includeEvaporation:
+            i_ratio = zero
+            e_ratio = ones
+        elif configuration.includeInfiltration:
+            i_ratio = ones
+            e_ratio = zero
+        else:
+            i_ratio = zero
+            e_ratio = zero
+        return i_ratio, e_ratio
+    
     def groundFlow():
         pass
