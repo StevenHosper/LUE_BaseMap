@@ -6,12 +6,9 @@ Created on Wed Feb 15 2023
 """
 # The HydrologicBaseModel
 import lue.framework as lfr
-import lue.pcraster as lpr
-import docopt
 import numpy as np
 import math as math
 import os
-import pandas as pd
 import requests
 import datetime
 import sys
@@ -19,6 +16,7 @@ import time
 import configuration as config
 import getData as data
 import MakeGIF
+import reporting
 
 
 # Timer to add some measure of functionality to the program
@@ -124,9 +122,8 @@ class mainModel():
         self.height = self.waterheight + self.dem
         
         # Create file with current situation of the water balance
-        lfr.to_gdal(self.groundWaterHeight, config.path + f'/output/{config.scenario}/groundwater_{current_date}.tiff')
-        #lfr.to_gdal(self.height, config.path + f'/output/{config.scenario}/surfaceheight_{current_date}.tiff')
-        lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/waterheight_{current_date}.tiff')
+        variables = [self.waterheight, self.groundWaterHeight]
+        reporting.report.static(current_date, variables, config.output_path)
         return 0
     
     
@@ -178,7 +175,7 @@ class mainModel():
             
             # The excess groundwater seeps upwards out of the soil
             groundWaterSurplus = self.groundWaterHeight - self.dem
-            self.groundwaterheight = self.groundWaterHeight - groundWaterSurplus
+            self.groundWaterHeight = self.groundWaterHeight - groundWaterSurplus
             self.waterheight = self.waterheight + groundWaterSurplus
             
             # Add precipitation to the watertable

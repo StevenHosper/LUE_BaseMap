@@ -23,12 +23,15 @@ startDate = datetime.date(year = 2023, month = 2, day = 23)
 endDate   = datetime.date(year = 2023, month = 3, day = 25)
 
 # Include processes
-variables = ['precipitation', 'evaporation', 'infiltration']
 includePrecipitation = True
 includeEvaporation   = True
 includeInfiltration  = True
 includePercolation   = True
 includeGroundFlow    = True
+
+# Report
+variables = ['waterheight', 'groundWaterHeight']
+fluxes    = []
 
 # Set values
 initialWaterTable = 1.30
@@ -64,6 +67,8 @@ if not useAPI:
         path = "C:/Users/steven.hosper/Desktop/Mapje Stage/"      # Local directory
 else:
     path = root_path
+    
+output_path = path + f'/output/{scenario}'
     
 # API URLs
 precipAPI = "730d6675-35dd-4a35-aa9b-bfb8155f9ca7"
