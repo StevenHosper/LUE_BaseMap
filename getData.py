@@ -12,8 +12,8 @@ import datetime
 import uuid as uid
 from osgeo import gdal
 
-class getData():
-    def getAPIData(date: datetime.date, variable: str, session):
+class get():
+    def apiTemporal(date: datetime.date, variable: str, session):
         """
         Summary:
             Get data with the use of an API from the Lizard server of Nelen & Schuurmans
@@ -62,7 +62,7 @@ class getData():
         data = lfr.from_gdal(mem_file, configuration.partitionShape)
         return data
     
-    def getData(path: str, date: datetime.date, variable: str) -> object:
+    def localTemporal(path: str, date: datetime.date, variable: str) -> object:
         """
         Summary:
             Get data from the APIs to use in the model.
@@ -83,7 +83,7 @@ class getData():
         data = lfr.from_gdal(variable_path, configuration.partitionShape)
         return data
     
-    def getKs(soilType, dummy):
+    def Ks(soilType, dummy):
         # Assign K for de Wupsel
         Ks = dummy
         for i in range(20):
@@ -108,3 +108,26 @@ class getData():
             else:
                 Ks = lfr.where(soilType == i, 5.0*10**-2, Ks)           # Hydraulic conductivity in m/day
         return Ks
+    
+    def landC(landUse, dummy):
+        # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
+        land_c = dummy
+        for i in range(255):
+            if i in configuration.concrete:
+                land_c = lfr.where(landUse == i, 0.001, land_c)
+                
+            elif i in configuration.green or 44 > i > 157:                              # Crops are given a multiplier of 1.2 as they also have pore structures \
+                land_c = lfr.where(landUse == i, 1.1, land_c)            # but a different on can be assigned.
+                
+            elif i in configuration.water:                                              # Any type of water is assigned 1, as this should have the saturated hydraulic conductivity \
+                land_c = lfr.where(landUse == i, 1.0, land_c)            # as precipitation value. --> However, these places probably have inflow from groundwater.
+            
+            elif i in configuration.compacted:
+                land_c = lfr.where(landUse == i, 0.7, land_c)
+                
+            elif i in configuration.other_road:
+                land_c = lfr.where(landUse == i, 0.3, land_c) 
+                
+            else:
+                land_c = lfr.where(landUse == i, 0.8, land_c)
+        return land_c

@@ -15,7 +15,7 @@ useAPI = False
 
 # Configuration file
 # scenarios : ["generated", "De Wupsel", "De Tol"]
-scenario = "generated"
+scenario = "De Wupsel"
 
 # Dates
 startDate = datetime.date(year = 2023, month = 2, day = 23)
@@ -68,3 +68,10 @@ else:
 precipAPI = "730d6675-35dd-4a35-aa9b-bfb8155f9ca7"
 evapAPI   = "e262dc03-f12b-4082-a4f4-7d0534e31fa4"
 demAPI    = "a60ad336-c95b-4fb6-b852-96fc352ee808"
+
+# Create ID variables
+concrete       = [2, 4, 6, 8, 10, 14, 15, 16, 25, 28, 35, 166, 253]
+green          = [40, 41, 43, 44, 112, 157]
+water          = [51, 254]
+compacted      = [18]
+other_road     = [29]

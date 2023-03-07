@@ -17,7 +17,7 @@ import datetime
 import sys
 import time
 import configuration as config
-import getData as gD
+import getData as data
 
 
 # Timer to add some measure of functionality to the program
@@ -148,18 +148,18 @@ class mainModel():
         # Precipitation
         if config.includePrecipitation:
             if config.useAPI:
-                precipitation     = gD.getData.get_api_data(current_date, 'precipitation', self.s)
+                precipitation     = data.get.apiTemporal(current_date, 'precipitation', self.s)
             else:
-                precipitation     = gD.getData.get_data(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'precipitation')
+                precipitation     = data.get.localTemporal(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'precipitation')
         else:
             precipitation = self.zero
         
         # Evaporation
         if config.includeEvaporation:
             if config.useAPI:
-                pot_evaporation   = gD.getData.get_api_data(current_date, 'potential_evaporation', self.s)
+                pot_evaporation   = data.get.apiTemporal(current_date, 'potential_evaporation', self.s)
             else:
-                pot_evaporation   = gD.getData.get_data(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'potential_evaporation')
+                pot_evaporation   = data.get.localTemporal(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'potential_evaporation')
         else:
             pot_evaporation = self.zero
         
@@ -232,18 +232,18 @@ class mainModel():
             # Precipitation
             if config.includePrecipitation:
                 if config.useAPI:
-                    precipitation     = gD.getData.get_api_data(current_date, 'precipitation', self.s)
+                    precipitation     = data.get.apiTemporal(current_date, 'precipitation', self.s)
                 else:
-                    precipitation     = gD.getData.get_data(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'precipitation')
+                    precipitation     = data.get.localTemporal(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'precipitation')
             else:
                 precipitation = self.zero
             
             # Evaporation
             if config.includeEvaporation:
                 if config.useAPI:
-                    pot_evaporation   = gD.getData.get_api_data(current_date, 'potential_evaporation', self.s)
+                    pot_evaporation   = data.get.apiTemporal(current_date, 'potential_evaporation', self.s)
                 else:
-                    pot_evaporation   = gD.getData.get_data(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'potential_evaporation')
+                    pot_evaporation   = data.get.localTemporal(f'{config.path}/data/generated/{config.arrayExtent}/', current_date, 'potential_evaporation')
             else:
                 pot_evaporation = self.zero
             
@@ -336,51 +336,20 @@ class mainModel():
         self.ldd = lfr.d8_flow_direction(self.dem)
         
         # Create the hydraulic conductivity variable
-        Ks       = gD.getData.getKs(soilType, self.ones)
+        Ks       = data.get.Ks(soilType, self.ones)
 
         # Create the land-use coefficient variable
-        land_c   = lfr.create_array(config.arrayShape,
-                                    config.partitionShape,
-                                    dtype=np.float32,
-                                    fill_value=0.5,
-                                    )
-        
-        # Create ID variables
-        concrete       = [2, 4, 6, 8, 10, 14, 15, 16, 25, 28, 35, 166, 253]
-        green          = [40, 41, 43, 44, 112, 157]
-        water          = [51, 254]
-        compacted      = [18]
-        other_road     = [29]
-        
-        # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
-        for i in range(255):
-            if i in concrete:
-                land_c = lfr.where(landUse == i, 0.001, land_c)
-                
-            elif i in green or 44 > i > 157:                              # Crops are given a multiplier of 1.2 as they also have pore structures \
-                land_c = lfr.where(landUse == i, 1.1, land_c)            # but a different on can be assigned.
-                
-            elif i in water:                                              # Any type of water is assigned 1, as this should have the saturated hydraulic conductivity \
-                land_c = lfr.where(landUse == i, 1.0, land_c)            # as precipitation value. --> However, these places probably have inflow from groundwater.
-            
-            elif i in compacted:
-                land_c = lfr.where(landUse == i, 0.7, land_c)
-                
-            elif i in other_road:
-                land_c = lfr.where(landUse == i, 0.3, land_c) 
-                
-            else:
-                land_c = lfr.where(landUse == i, 0.8, land_c)
+        landC   = data.get.landC(landUse, self.ones)
         
         # Save the land-use coefficient so it can be checked
-        lfr.to_gdal(land_c, config.path + f'/output/{config.scenario}/landUse_coefficients.tiff')
+        lfr.to_gdal(landC, config.path + f'/output/{config.scenario}/landUse_coefficients.tiff')
         lfr.to_gdal(Ks, config.path + f'/output/{config.scenario}/Ks.tiff')
         
         # Initialize the static
-        self.static(config.startDate, config.path, config.groundWaterTable, Ks, land_c, landUse)
+        self.static(config.startDate, config.path, config.groundWaterTable, Ks, landC, landUse)
         print("static completed")
         
-        self.iterate(config.startDate, config.endDate, config.path, config.groundWaterTable, Ks, land_c, landUse)
+        self.iterate(config.startDate, config.endDate, config.path, config.groundWaterTable, Ks, landC, landUse)
         print("iteration completed")
         return 0
 
