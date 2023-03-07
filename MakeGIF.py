@@ -11,6 +11,7 @@ import os.path
 import sys
 import datetime
 import time
+import configuration as config
 start_time = time.time()
 
 def slice_pathname(pathname, idx):
@@ -70,11 +71,11 @@ def main():
     at_work = False
     variable = 'groundwater'
     if at_work:
-        raster_pathname = f'{root_path}/output/{variable}'
-        animation_pathname = f'{root_path}/output/{variable}.gif'
+        raster_pathname = f'{root_path}/output/{config.scenario}/{variable}'
+        animation_pathname = f'{root_path}/output/{config.scenario}/{variable}.gif'
     else:
-        raster_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{variable}'
-        animation_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{variable}.gif'
+        raster_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{config.scenario}/{variable}'
+        animation_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{config.scenario}/{variable}.gif'
     
     assert not os.path.splitext(raster_pathname)[1]
 
@@ -86,11 +87,11 @@ def main():
     # Second animation
     variable = 'waterheight'
     if at_work:
-        raster_pathname = f'{root_path}/output/{variable}'
-        animation_pathname = f'{root_path}/output/{variable}.gif'
+        raster_pathname = f'{root_path}/output/{config.scenario}/{variable}'
+        animation_pathname = f'{root_path}/output/{config.scenario}/{variable}.gif'
     else:
-        raster_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{variable}'
-        animation_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{variable}.gif'
+        raster_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{config.scenario}/{variable}'
+        animation_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{config.scenario}/{variable}.gif'
     
     assert not os.path.splitext(raster_pathname)[1]
 
