@@ -82,7 +82,7 @@ def main():
     nr_rasters = 30
     assert nr_rasters >= 0
     
-    create_animation(raster_pathname, nr_rasters, animation_pathname, 15, 40)
+    create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 10)
     
     # Second animation
     variable = 'waterheight'

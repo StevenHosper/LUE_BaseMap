@@ -10,7 +10,7 @@ import configuration as config
 class update():
     def waterHeight(ldd, waterHeight, precipitation, evaporation,\
                     infiltration, flux, seepage):
-        waterHeight = 
+        waterHeight = waterHeight
         return waterHeight
     
     def groundWaterHeight(dem, Ks, waterHeight, groundWaterHeight,\

@@ -13,10 +13,13 @@ import requests
 import datetime
 import sys
 import time
+
+# Own functions
 import configuration as config
 import getData as data
 import MakeGIF
 import reporting
+import update
 
 
 # Timer to add some measure of functionality to the program
@@ -138,8 +141,6 @@ class mainModel():
             
             # Recalculate if the water should still flow in the same direction
             ldd = lfr.d8_flow_direction(self.height)
-            groundhead = self.groundWaterHeight + self.waterheight
-            groundldd = lfr.d8_flow_direction(groundhead)
             
             # Access the data from the directory or the API dependend on the settings
             precipitation     = data.get.precipitation(current_date, self.s, self.zero)
@@ -156,26 +157,6 @@ class mainModel():
                 i_ratio = self.zero
                 e_ratio = self.zero
             
-            # Calculate the groundwater flow
-            if config.includeGroundFlow:
-                groundflow = Ks * (groundhead - lfr.downstream(groundldd, groundhead))                               # Q = k * i * A
-            else:
-                groundflow = self.zero
-            
-            # Check the difference in dem (as this determines the total height that should be filled to create an equal surface)
-            height_difference = self.height - lfr.downstream(ldd, self.height)
-            potential_flux = lfr.where(height_difference > self.waterheight, 0.5*self.waterheight, 0.5*height_difference)
-            flux = lfr.where(ldd != 5, potential_flux, 0)
-            
-            # ROUTING
-            self.waterheight = self.waterheight + lfr.upstream(ldd, flux) - flux
-            self.groundWaterHeight = self.groundWaterHeight + lfr.upstream(groundldd, groundflow) - groundflow
-            
-            # The excess groundwater seeps upwards out of the soil
-            groundWaterSurplus = self.groundWaterHeight - self.dem
-            self.groundWaterHeight = self.groundWaterHeight - groundWaterSurplus
-            self.waterheight = self.waterheight + groundWaterSurplus
-            
             # Add precipitation to the watertable
             self.waterheight = self.waterheight + precipitation
             
@@ -185,6 +166,19 @@ class mainModel():
             # Calculate the actual evaporation and infiltration
             evaporation  = lfr.where(self.waterheight >= ie, pot_evaporation, self.waterheight*e_ratio)
             infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
+            
+            # Check the difference in dem (as this determines the total height that should be filled to create an equal surface)
+            height_difference = self.height - lfr.downstream(ldd, self.height)
+            potential_flux = lfr.where(height_difference > self.waterheight, 0.5*self.waterheight, 0.5*height_difference)
+            flux = lfr.where(ldd != 5, potential_flux, 0)
+            
+            # ROUTING
+            self.waterheight = self.waterheight + lfr.upstream(ldd, flux) - flux
+            
+            self.groundWaterHeight, seepage = update.update.groundWaterHeight(
+                self.dem, Ks, self.waterheight, self.groundWaterHeight, infiltration, \
+                percolation, self.zero
+                )
 
             # Remove the evaporation and infiltration from the waterheight as it is lost to the 
             # atmosphere or groundwater.
