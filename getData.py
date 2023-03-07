@@ -132,7 +132,7 @@ class get():
                 land_c = lfr.where(landUse == i, 0.8, land_c)
         return land_c
     
-    def calculate_pot_infiltration(Ks, landC, dem, groundWaterHeight):
+    def calculate_infiltration(Ks, landC):
         """
         Summary:
             Calculate the rate of infiltration based on the soil type and the land use
@@ -146,7 +146,7 @@ class get():
         """
         # For now very basic formula, hydraulic conductivity times land-use coefficient/multiplier
         pot_infiltration = Ks * landC
-        pot_infiltration = lfr.where(pot_infiltration > (dem - groundWaterHeight), (dem - groundWaterHeight), pot_infiltration)
+        
         return pot_infiltration
     
     def precipitation(date, session, zero):
