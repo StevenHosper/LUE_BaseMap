@@ -4,6 +4,7 @@ Created on Mon Mar 6 2023
 
 @author: steven.hosper
 """
+# Configuration for the HydrologicBaseModel
 import datetime
 import os
 
