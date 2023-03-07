@@ -16,9 +16,8 @@ import requests
 import datetime
 import sys
 import time
-import uuid as uid
-from osgeo import gdal
 import configuration as config
+import getData as gD
 
 
 # Timer to add some measure of functionality to the program
@@ -80,76 +79,6 @@ class mainModel():
         print("__init__ done")
         
     
-    def get_api_data(self, date: datetime.date, variable: str, session):
-        """
-        Summary:
-            Get data with the use of an API from the Lizard server of Nelen & Schuurmans
-            
-        Input:
-            date: the datetime.date of interest
-            variable: the variable of interest
-        
-        Returns:
-            data: the data from the tiff file in lue array format.
-        """
-        dates = f'{date}T11:00:00Z'
-        
-        # The different variables available with their corresponding Lizard rasters
-        urls = {'precipitation': config.precipAPI, \
-                'evaporation'  : config.evapAPI,
-                'dem'          : config.demAPI
-                }
-        
-        url = f'https://demo.lizard.net/api/v4/rasters/{urls[variable]}/data/'
-        # Make sure the variable input is correct
-        if variable not in urls:
-            raise Exception("The variable is not found. Available variables: 'precipitation', 'evaporation'.")
-                
-        # Format the API request
-        request = {
-                    "url": url,
-                    "params":{
-                       "cellsize": config.resolution,
-                       "format": "geotiff",
-                       "bbox": '3.330044347435246,50.723122219626666,7.278104205075899,53.80454395165623',          # bbox of the area of interest in coordinates
-                       "width": config.arrayExtent,
-                       "height": config.arrayExtent,
-                       "srs": "EPSG:4326",
-                       "target_srs": "EPSG:28992",
-                       "start": dates,                                                                              # time
-                    },}
-
-        # Pull the request from the Lizard server
-        pull = session.get(**request)
-        pull.raise_for_status()
-        
-        # Assign a memory file to store the api content
-        mem_file = f"/vsimem/{uid.uuid4()}.tif"
-        gdal.FileFromMemBuffer(mem_file, pull.content)
-        data = lfr.from_gdal(mem_file, config.partitionShape)
-        return data
-        
-    def get_data(self, path: str, date: datetime.date, variable: str) -> object:
-        """
-        Summary:
-            Get data from the APIs to use in the model.
-            Uses the format of "path/variable_date.tiff"
-            
-        Input:
-            path: the directory where the files are located
-            date: the datetime date
-            variable: the variable name of interest
-            
-        Returns:
-            data: the data from the tiff file to be used as an lue array
-        """
-        # Create the full path of the corresponding variable for the current
-        variable_path = path + f'{variable}_{date}.tiff'
-        
-        # Get the data from the .tif file stored in the path directory
-        data = lfr.from_gdal(variable_path, config.partitionShape)
-        return data
-    
     def calculate_infiltration(self, Ks, land_c):
         """
         Summary:
@@ -199,7 +128,7 @@ class mainModel():
         return kinematic
     
     
-    def static(self, use_api: bool, current_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, landUse):
+    def static(self, current_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, landUse):
         # Print the start date for logging purposes
         print(f'The startdate is: {current_date}')
         
@@ -218,19 +147,19 @@ class mainModel():
         # Access the data from the directory or the API dependend on the settings
         # Precipitation
         if config.includePrecipitation:
-            if use_api:
-                precipitation     = self.get_api_data(current_date, 'precipitation', self.s)
+            if config.useAPI:
+                precipitation     = gD.getData.get_api_data(current_date, 'precipitation', self.s)
             else:
-                precipitation     = self.get_data(f'{path}/data/De Wupsel/', current_date, 'precipitation')
+                precipitation     = gD.getData.get_data(f'{path}/data/De Wupsel/', current_date, 'precipitation')
         else:
-            precipitation = gD.getData.zero
+            precipitation = self.zero
         
         # Evaporation
         if config.includeEvaporation:
-            if use_api:
-                pot_evaporation   = self.get_api_data(current_date, 'potential_evaporation', self.s)
+            if config.useAPI:
+                pot_evaporation   = gD.getData.get_api_data(current_date, 'potential_evaporation', self.s)
             else:
-                pot_evaporation   = self.get_data(f'{path}/data/De Wupsel/', current_date, 'potential_evaporation')
+                pot_evaporation   = gD.getData.get_data(f'{path}/data/De Wupsel/', current_date, 'potential_evaporation')
         else:
             pot_evaporation = self.zero
         
@@ -290,7 +219,7 @@ class mainModel():
     
     
     
-    def iterate(self, use_api: bool, start_date: datetime.date, end_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, landUse):
+    def iterate(self, start_date: datetime.date, end_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, landUse):
         
         for i in range(int((end_date - start_date).days)):
             # Print the time to keep track while the program runs
@@ -305,19 +234,19 @@ class mainModel():
             # Access the data from the directory or the API dependend on the settings
             # Precipitation
             if config.includePrecipitation:
-                if use_api:
-                    precipitation     = self.get_api_data(current_date, 'precipitation', self.s)
+                if config.useAPI:
+                    precipitation     = gD.getData.get_api_data(current_date, 'precipitation', self.s)
                 else:
-                    precipitation     = self.get_data(f'{path}/data/De Wupsel/', current_date, 'precipitation')
+                    precipitation     = gD.getData.get_data(f'{path}/data/De Wupsel/', current_date, 'precipitation')
             else:
                 precipitation = self.zero
             
             # Evaporation
             if config.includeEvaporation:
-                if use_api:
-                    pot_evaporation   = self.get_api_data(current_date, 'potential_evaporation', self.s)
+                if config.useAPI:
+                    pot_evaporation   = gD.getData.get_api_data(current_date, 'potential_evaporation', self.s)
                 else:
-                    pot_evaporation   = self.get_data(f'{path}/data/De Wupsel/', current_date, 'potential_evaporation')
+                    pot_evaporation   = gD.getData.get_data(f'{path}/data/De Wupsel/', current_date, 'potential_evaporation')
             else:
                 pot_evaporation = self.zero
             
@@ -501,10 +430,10 @@ class mainModel():
         lfr.to_gdal(Ks, path + f'/output/Ks.tiff')
         
         # Initialize the static
-        self.static(useAPI, current_date, path, groundWaterTable, Ks, land_c, landUse)
+        self.static(current_date, path, groundWaterTable, Ks, land_c, landUse)
         print("static completed")
         
-        self.iterate(useAPI, startDate, endDate, path, groundWaterTable, Ks, land_c, landUse)
+        self.iterate(startDate, endDate, path, groundWaterTable, Ks, land_c, landUse)
         print("iteration completed")
         return 0
 
