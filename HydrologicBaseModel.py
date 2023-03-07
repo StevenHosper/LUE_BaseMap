@@ -142,7 +142,7 @@ class mainModel():
         self.groundwaterheight = self.dem - 0.1
         self.groundwaterheight = lfr.where(landUse == 51, self.dem, self.groundwaterheight)
         
-        lfr.to_gdal(self.waterheight, path + f'/output/initial_water_height.tiff')
+        lfr.to_gdal(self.waterheight, config.path + f'/output/initial_water_height.tiff')
 
         # Access the data from the directory or the API dependend on the settings
         # Precipitation
@@ -150,7 +150,7 @@ class mainModel():
             if config.useAPI:
                 precipitation     = gD.getData.get_api_data(current_date, 'precipitation', self.s)
             else:
-                precipitation     = gD.getData.get_data(f'{path}/data/De Wupsel/', current_date, 'precipitation')
+                precipitation     = gD.getData.get_data(f'{config.path}/data/De Wupsel/', current_date, 'precipitation')
         else:
             precipitation = self.zero
         
@@ -159,7 +159,7 @@ class mainModel():
             if config.useAPI:
                 pot_evaporation   = gD.getData.get_api_data(current_date, 'potential_evaporation', self.s)
             else:
-                pot_evaporation   = gD.getData.get_data(f'{path}/data/De Wupsel/', current_date, 'potential_evaporation')
+                pot_evaporation   = gD.getData.get_data(f'{config.path}/data/De Wupsel/', current_date, 'potential_evaporation')
         else:
             pot_evaporation = self.zero
         
@@ -209,16 +209,13 @@ class mainModel():
         self.height = self.waterheight + self.dem
         
         # Create file with current situation of the water balance
-        lfr.to_gdal(self.groundwaterheight, path + f'/output/groundwater_{current_date}.tiff')
-        #lfr.to_gdal(self.height, path + f'/output/surfaceheight_{current_date}.tiff')
-        lfr.to_gdal(self.waterheight, path + f'/output/waterheight_{current_date}.tiff')
+        lfr.to_gdal(self.groundwaterheight, config.path + f'/output/groundwater_{current_date}.tiff')
+        #lfr.to_gdal(self.height, config.path + f'/output/surfaceheight_{current_date}.tiff')
+        lfr.to_gdal(self.waterheight, config.path + f'/output/waterheight_{current_date}.tiff')
         return 0
     
     
-    
-    
-    
-    
+
     def iterate(self, start_date: datetime.date, end_date: datetime.date, path: str, hydraulic_head: float, Ks, land_c, landUse):
         
         for i in range(int((end_date - start_date).days)):
@@ -237,7 +234,7 @@ class mainModel():
                 if config.useAPI:
                     precipitation     = gD.getData.get_api_data(current_date, 'precipitation', self.s)
                 else:
-                    precipitation     = gD.getData.get_data(f'{path}/data/De Wupsel/', current_date, 'precipitation')
+                    precipitation     = gD.getData.get_data(f'{config.path}/data/De Wupsel/', current_date, 'precipitation')
             else:
                 precipitation = self.zero
             
@@ -246,7 +243,7 @@ class mainModel():
                 if config.useAPI:
                     pot_evaporation   = gD.getData.get_api_data(current_date, 'potential_evaporation', self.s)
                 else:
-                    pot_evaporation   = gD.getData.get_data(f'{path}/data/De Wupsel/', current_date, 'potential_evaporation')
+                    pot_evaporation   = gD.getData.get_data(f'{config.path}/data/De Wupsel/', current_date, 'potential_evaporation')
             else:
                 pot_evaporation = self.zero
             
@@ -322,51 +319,24 @@ class mainModel():
             self.height = self.dem + self.waterheight
             
             # Save the variables to tiff files to a tiff file
-            lfr.to_gdal(self.groundwaterheight, path + f'/output/groundwater_{current_date}.tiff')
-            lfr.to_gdal(self.waterheight, path + f'/output/waterheight_{current_date}.tiff')
-            #lfr.to_gdal(self.height, path + f'/output/surfaceheight_{current_date}.tiff')
+            lfr.to_gdal(self.groundwaterheight, config.path + f'/output/groundwater_{current_date}.tiff')
+            lfr.to_gdal(self.waterheight, config.path + f'/output/waterheight_{current_date}.tiff')
+            #lfr.to_gdal(self.height, config.path + f'/output/surfaceheight_{current_date}.tiff')
         return 0
-     
-     
-     
-     
      
      
     @lfr.runtime_scope 
     def simulate(self):
-        # Settings
-        startDate = config.startDate
-        endDate = config.endDate
-        useAPI = config.useAPI
-        self.variables = ['precipitation', 'evaporation', 'infiltration']
-        
-        groundWaterTable = config.groundWaterTable                                        # The groundwater table height in meters
-        
-        root_path = os.path.dirname(__file__)
-        if not config.useAPI:
-            if config.network:
-                path = f"{root_path}/"
-            else:
-                path = "C:/Users/steven.hosper/Desktop/Mapje Stage/"      # Local directory
-        else:
-            path = root_path
-        
-        current_date = startDate                                         # Set the current date to the start date
-        
         # Load initial variables
-        self.dem  = lfr.from_gdal(path + f'/data/De Tol/dem_tol_v2.tiff', config.partitionShape)
-        landUse  = lfr.from_gdal(path + f'/data/De Tol/landgebruik_tol.tiff', config.partitionShape)
-        soilType = lfr.from_gdal(path + f'/data/De Tol/bodem_tol.tiff', config.partitionShape)
+        self.dem  = lfr.from_gdal(config.path + f'/data/{config.scenario}/dem.tiff', config.partitionShape)
+        landUse  = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)
+        soilType = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)
         
         # Create initial ldd
         self.ldd = lfr.d8_flow_direction(self.dem)
         
         # Create the hydraulic conductivity variable
-        Ks       = lfr.create_array(config.arrayShape,
-                                    config.partitionShape,
-                                    dtype=np.float32,
-                                    fill_value=1,
-                                    )
+        Ks       = self.ones
         
         # Assign K for de Wupsel
         for i in range(20):
@@ -426,14 +396,14 @@ class mainModel():
                 land_c = lfr.where(landUse == i, 0.8, land_c)
         
         # Save the land-use coefficient so it can be checked
-        lfr.to_gdal(land_c, path + f'/output/landUse_coefficients.tiff')
-        lfr.to_gdal(Ks, path + f'/output/Ks.tiff')
+        lfr.to_gdal(land_c, config.path + f'/output/landUse_coefficients.tiff')
+        lfr.to_gdal(Ks, config.path + f'/output/Ks.tiff')
         
         # Initialize the static
-        self.static(current_date, path, groundWaterTable, Ks, land_c, landUse)
+        self.static(config.startDate, config.path, config.groundWaterTable, Ks, land_c, landUse)
         print("static completed")
         
-        self.iterate(startDate, endDate, path, groundWaterTable, Ks, land_c, landUse)
+        self.iterate(config.startDate, config.endDate, config.path, config.groundWaterTable, Ks, land_c, landUse)
         print("iteration completed")
         return 0
 
