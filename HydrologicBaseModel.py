@@ -16,11 +16,11 @@ import time
 
 # Own functions
 import configuration as config
-import getData as data
+import dataAccess as dA
 import MakeGIF
 import reporting
 import update
-import DataGeneration
+import dataGen as dG
 
 
 # Timer to add some measure of functionality to the program
@@ -78,11 +78,11 @@ class mainModel():
         lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/initial_water_height.tiff')
 
         # Access the data from the directory or the API dependend on the settings
-        precipitation     = data.get.precipitation(current_date, self.s, DataGeneration.dataGeneration.lue_zero())
-        pot_evaporation   = data.get.pot_evaporation(current_date, self.s, DataGeneration.dataGeneration.lue_zero())   
-        pot_infiltration  = data.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, DataGeneration.dataGeneration.lue_zero())
-        percolation       = data.get.percolation(self.dem, self.groundWaterHeight, Ks, DataGeneration.dataGeneration.lue_zero())
-        i_ratio, e_ratio  = data.get.ieRatio(pot_evaporation, pot_infiltration, DataGeneration.dataGeneration.lue_one(), DataGeneration.dataGeneration.lue_zero())
+        precipitation     = dA.get.precipitation(current_date, self.s, dG.generate.lue_zero())
+        pot_evaporation   = dA.get.pot_evaporation(current_date, self.s, dG.generate.lue_zero())   
+        pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, dG.generate.lue_zero())
+        percolation       = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
+        i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration, dG.generate.lue_one(), dG.generate.lue_zero())
 
         # Add precipitation to the watertable
         self.waterheight = self.waterheight + precipitation
@@ -101,7 +101,7 @@ class mainModel():
         
         # Make sure the waterheight is not below zero as this is not possible.
         # There can be no evaporation without water.
-        self.waterheight = lfr.where(self.waterheight < DataGeneration.dataGeneration.lue_zero(), DataGeneration.dataGeneration.lue_zero(), self.waterheight)
+        self.waterheight = lfr.where(self.waterheight < dG.generate.lue_zero(), dG.generate.lue_zero(), self.waterheight)
         self.height = self.waterheight + self.dem
         
         # Create file with current situation of the water balance
@@ -122,10 +122,10 @@ class mainModel():
             ldd = lfr.d8_flow_direction(self.height)
             
             # Access the data from the directory or the API dependend on the settings
-            precipitation     = data.get.precipitation(current_date, self.s, DataGeneration.dataGeneration.lue_zero())
-            pot_evaporation   = data.get.pot_evaporation(current_date, self.s, DataGeneration.dataGeneration.lue_zero())
-            pot_infiltration  = data.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, DataGeneration.dataGeneration.lue_zero())
-            percolation       = data.get.percolation(self.dem, self.groundWaterHeight, Ks, DataGeneration.dataGeneration.lue_zero())
+            precipitation     = dA.get.precipitation(current_date, self.s, dG.generate.lue_zero())
+            pot_evaporation   = dA.get.pot_evaporation(current_date, self.s, dG.generate.lue_zero())
+            pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, dG.generate.lue_zero())
+            percolation       = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
             
             
             # Ratio of evaporation compared to infiltration
@@ -133,8 +133,8 @@ class mainModel():
                 i_ratio = lfr.divide(pot_infiltration, lfr.add(pot_evaporation, pot_infiltration))
                 e_ratio = lfr.divide(pot_evaporation, lfr.add(pot_evaporation, pot_infiltration))
             else:
-                i_ratio = DataGeneration.dataGeneration.lue_zero()
-                e_ratio = DataGeneration.dataGeneration.lue_zero()
+                i_ratio = dG.generate.lue_zero()
+                e_ratio = dG.generate.lue_zero()
             
             # Add precipitation to the watertable
             self.waterheight = self.waterheight + precipitation
@@ -156,7 +156,7 @@ class mainModel():
             
             self.groundWaterHeight, seepage = update.update.groundWaterHeight(
                 self.dem, Ks, self.waterheight, self.groundWaterHeight, infiltration, \
-                percolation, DataGeneration.dataGeneration.lue_zero()
+                percolation, dG.generate.lue_zero()
                 )
 
             # Remove the evaporation and infiltration from the waterheight as it is lost to the 
@@ -165,7 +165,7 @@ class mainModel():
             self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
             
             # Waterheight can never be lower than zero.
-            self.waterheight = lfr.where(self.waterheight < DataGeneration.dataGeneration.lue_zero(), DataGeneration.dataGeneration.lue_zero(), self.waterheight)
+            self.waterheight = lfr.where(self.waterheight < dG.generate.lue_zero(), dG.generate.lue_zero(), self.waterheight)
             
             # Adjust the concurrent height
             self.height = self.dem + self.waterheight
@@ -188,11 +188,11 @@ class mainModel():
         self.ldd = lfr.d8_flow_direction(self.dem)
         
         # Create the hydraulic conductivity variable
-        Ks       = data.get.Ks(soilType, DataGeneration.dataGeneration.lue_one())
+        Ks       = dA.get.Ks(soilType, dG.generate.lue_one())
         lfr.to_gdal(Ks, config.path + f'/output/{config.scenario}/Ks.tiff')
         
         # Create the land-use coefficient variable
-        landC   = data.get.landC(landUse, DataGeneration.dataGeneration.lue_one())
+        landC   = dA.get.landC(landUse, dG.generate.lue_one())
         lfr.to_gdal(landC, config.path + f'/output/{config.scenario}/landUse_coefficients.tiff')
         
         # Initialize the static
@@ -228,7 +228,7 @@ lfr.start_hpx_runtime(cfg)
 if lfr.on_root_locality():
     # Check if data should be generated
     if config.generateData:
-        DataGeneration.dataGenerate.main()
+        dG.generate.main()
     
     # Run the main model
     main = mainModel()
