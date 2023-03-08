@@ -11,8 +11,18 @@ import numpy as np
 import datetime
 import uuid as uid
 from osgeo import gdal
+import configuration as config
+import requests
 
 class get():
+    def apiSession():
+        session = requests.Session()
+        session.headers = {'username': config.username,
+                          'password': config.password,
+                          'Content-Type': 'application/json',
+                          }
+        return session
+    
     def apiTemporal(date: datetime.date, variable: str, session):
         """
         Summary:

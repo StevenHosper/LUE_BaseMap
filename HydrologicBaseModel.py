@@ -9,7 +9,6 @@ import lue.framework as lfr
 import numpy as np
 import math as math
 import os
-import requests
 import datetime
 import sys
 import time
@@ -49,12 +48,6 @@ class mainModel():
             Some useful arrays are created for calculations in the model.
         """
 
-        self.s = requests.Session()
-        self.s.headers = {'username': config.username,
-                          'password': config.password,
-                          'Content-Type': 'application/json',
-                          }
-
         print(f'partition: {config.partitionShape}', f'array: {config.arrayShape}')
         
         print("__init__ done")
@@ -78,8 +71,8 @@ class mainModel():
         lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/initial_water_height.tiff')
 
         # Access the data from the directory or the API dependend on the settings
-        precipitation     = dA.get.precipitation(current_date, self.s, dG.generate.lue_zero())
-        pot_evaporation   = dA.get.pot_evaporation(current_date, self.s, dG.generate.lue_zero())   
+        precipitation     = dA.get.precipitation(current_date, dA.get.apiSession(), dG.generate.lue_zero())
+        pot_evaporation   = dA.get.pot_evaporation(current_date, dA.get.apiSession(), dG.generate.lue_zero())   
         pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, dG.generate.lue_zero())
         percolation       = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
         i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration, dG.generate.lue_one(), dG.generate.lue_zero())
@@ -122,8 +115,8 @@ class mainModel():
             ldd = lfr.d8_flow_direction(self.height)
             
             # Access the data from the directory or the API dependend on the settings
-            precipitation     = dA.get.precipitation(current_date, self.s, dG.generate.lue_zero())
-            pot_evaporation   = dA.get.pot_evaporation(current_date, self.s, dG.generate.lue_zero())
+            precipitation     = dA.get.precipitation(current_date, dA.get.apiSession(), dG.generate.lue_zero())
+            pot_evaporation   = dA.get.pot_evaporation(current_date, dA.get.apiSession(), dG.generate.lue_zero())
             pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, dG.generate.lue_zero())
             percolation       = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
             
