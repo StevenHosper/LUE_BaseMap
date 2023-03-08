@@ -80,7 +80,7 @@ class generate():
         Assign $% of the cells to become rain producing cells.
         """
         fraction_raincells = 0.05                                           # Determine the percentage of raincells in the array
-        raincells = lfr.uniform(self.lue_zero(), np.float32, 0, 1) <= fraction_raincells
+        raincells = lfr.uniform(generate.lue_zero(), np.float32, 0, 1) <= fraction_raincells
         return raincells
     
     def precipitation(self, raincells):
@@ -104,7 +104,7 @@ class generate():
         lRain = nr_raincells_nearby > 3
         
         random = max(0, np.random.randint(0, 20) - 10)
-        rain_value = lfr.uniform(self.lue_zero(), np.float32, 0, 0.3)
+        rain_value = lfr.uniform(generate.lue_zero(), np.float32, 0, 0.3)
         
         rain = lfr.where(sRain, rain_value, 0)
         rain = lfr.where(mRain, rain_value*2, rain)
@@ -132,7 +132,7 @@ class generate():
         below zero has no evporation, the rest is exponentially scaled with temperature. 
         """
         latitude = 0.90                                                     # in radians
-        day = int((date - self.start_of_year).days) + 1                     # calculate the day of the year
+        day = int((date - datetime.date(year=date.year, month=1, day=1)).days) + 1                     # calculate the day of the year
         declination = 1 + 0.033*math.cos((2*math.pi*day)/365)               # calculate the declination
         sunset_angle = math.acos(math.radians(-math.tan(math.radians(declination))*math.tan(math.radians(latitude))))
         N = (24/math.pi)*sunset_angle                                       # calculate the amount of daylight hours per 12 hours
@@ -164,6 +164,8 @@ class generate():
         # Calculate the amount of rainfall and precipitation for each of the days in the timeperiod
         for i in range(int((config.endDate - config.startDate).days)):
             print(f'Generating data for day {i + 1}.')
+            date = config.startDate + datetime.timedelta(1+i)
+            print(date)
             # Rainfall generation per day
             if config.generatePrecip:
                 if i < 5:
@@ -176,7 +178,7 @@ class generate():
                     rain = self.precipitation(raincells)
                     lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
                 else:
-                    rain = self.lue_zero()
+                    rain = generate.lue_zero()
                     lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
             
             if config.generateEvapo:

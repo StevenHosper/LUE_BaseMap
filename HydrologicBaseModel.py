@@ -79,9 +79,10 @@ class mainModel():
         infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
         
         # Runoff test
-        runoff = update.update.runoff(precipitation, evaporation, infiltration)
+        runoff = update.update.runoff(precipitation, evaporation, infiltration) *100
+        runoff = lfr.where(runoff >= 0, runoff, 0.001)
         
-        discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_zero(), 1.5, 0.6, 1.0, dG.generate.lue_one())
+        discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one(), 1.5, 0.6, 1.0, dG.generate.lue_one())
         
         
         # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
@@ -95,7 +96,7 @@ class mainModel():
         self.height = self.waterheight + self.dem
         
         # Create file with current situation of the water balance
-        variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight, "discharge": discharge}
+        variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight, "runoff": runoff, "discharge": discharge}
         reporting.report.static(current_date, variables, config.output_path)
         return 0
     
@@ -182,8 +183,7 @@ class mainModel():
         # Initialize the static
         self.static(config.startDate, config.initialWaterTable, Ks, landC, landUse)
         print("static completed")
-        
-        sys.exit()
+
         self.iterate(config.startDate, config.endDate, Ks, landC)
         print("iteration completed")
         return 0
@@ -211,10 +211,6 @@ lfr.start_hpx_runtime(cfg)
 # localities. Never perform Python code on the other localities than the
 # root locality unless you know what you are doing.
 if lfr.on_root_locality():
-    # Check if data should be generated
-    if config.generateData:
-        dG.generate.main()
-    
     # Run the main model
     main = mainModel()
     main.simulate()

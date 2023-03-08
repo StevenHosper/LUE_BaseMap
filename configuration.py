@@ -11,8 +11,8 @@ import os
 ### GENERAL SETTINGS ###
 network      = False                                                    # use network disk of NS [True] or local disk [False]
 useAPI       = False                                                    # use API functionality to access data
-generateData = False                                                    # generate new data to be used
-scenario     = "De Wupsel"                                              # scenarios : ["generated", "De Wupsel", "De Tol"]
+generateData = True                                                    # generate new data to be used
+scenario     = "De Wupsel10"                                            # scenarios : ["generated", "De Wupsel", "De Tol", "De Wupsel10"]
 startDate    = datetime.date(year = 2023, month = 2, day = 23)
 endDate      = datetime.date(year = 2023, month = 3, day = 25)
 
@@ -42,7 +42,6 @@ fluxes    = []
 
 # Set values
 initialWaterTable = 1.30
-resolution       = 1
 
 if scenario == "De Wupsel" or scenario == "De Tol":
     arrayExtent     = 5000
@@ -51,6 +50,7 @@ if scenario == "De Wupsel" or scenario == "De Tol":
     partitionExtent = 1000
     assert partitionExtent > 0
     partitionShape  = 2 * (partitionExtent,)
+    resolution       = 1
 elif scenario == "generated":
     arrayExtent     = 1000
     assert arrayExtent > 0
@@ -58,6 +58,15 @@ elif scenario == "generated":
     partitionExtent = 1000
     assert partitionExtent > 0
     partitionShape  = 2 * (partitionExtent,)
+    resolution       = 1
+elif scenario == "De Wupsel10":
+    arrayExtent     = 2000
+    assert arrayExtent > 0
+    arrayShape      = 2 * (arrayExtent,)
+    partitionExtent = 1000
+    assert partitionExtent > 0
+    partitionShape  = 2 * (partitionExtent,)
+    resolution       = 10
 else:
     raise("Invalid scenario")
 
