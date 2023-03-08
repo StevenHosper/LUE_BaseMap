@@ -14,6 +14,7 @@ import sys
 import time
 
 # Own functions
+# TO-DO: Reformat by the use of: from ... import ... as ...
 import configuration as config
 import dataAccess as dA
 import MakeGIF

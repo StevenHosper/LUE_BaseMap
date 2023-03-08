@@ -10,9 +10,7 @@ import osgeo.gdal as gdal
 import os.path
 import sys
 import datetime
-import time
 import configuration as config
-start_time = time.time()
 
 def slice_pathname(pathname, idx):
     date = datetime.date(year = 2023, month = 2, day = 23)
@@ -103,5 +101,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
-print("--- %s seconds ---" % (time.time() - start_time))

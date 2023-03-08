@@ -9,12 +9,12 @@ import datetime
 import os
 
 ### GENERAL SETTINGS ###
-network = False                                                     # use network disk of NS [True] or local disk [False]
-useAPI = True                                                      # use API functionality to access data
-generateData = False                                                # generate new data to be used
-scenario = "generated"                                              # scenarios : ["generated", "De Wupsel", "De Tol"]
-startDate = datetime.date(year = 2023, month = 2, day = 23)
-endDate   = datetime.date(year = 2023, month = 3, day = 25)
+network      = False                                                    # use network disk of NS [True] or local disk [False]
+useAPI       = False                                                    # use API functionality to access data
+generateData = False                                                    # generate new data to be used
+scenario     = "generated"                                              # scenarios : ["generated", "De Wupsel", "De Tol"]
+startDate    = datetime.date(year = 2023, month = 2, day = 23)
+endDate      = datetime.date(year = 2023, month = 3, day = 25)
 
 
 ### API SETTINGS ###

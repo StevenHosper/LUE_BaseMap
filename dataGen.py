@@ -7,31 +7,10 @@ Created on Wed Feb 15 10:03:54 2023
 
 import lue.framework as lfr
 import numpy as np
-import os
-import pandas as pd
 import requests
 import datetime
-import sys
 import math as math
-import time
 import configuration as config
-
-
-# Timer to add some measure of functionality to the program
-start_time = time.time()
-
-usage = """\
-Generate data when it is not available for the model
-
-Usage:
-    {command}
-
-Options:
-    {command} : --hpx:thread = nrCoresUsed 
-""".format(
-    command=os.path.basename(sys.argv[0])
-)
-
 
 class generate(): 
     def __init__(self):
@@ -245,5 +224,3 @@ lfr.start_hpx_runtime(cfg)
 if __name__ == "__main__":
     main = generate()
     main.simulate()
-    
-print("--- %s seconds ---" % (time.time() - start_time))
