@@ -8,16 +8,27 @@ Created on Mon Mar 6 2023
 import datetime
 import os
 
-# General settings
+### GENERAL SETTINGS ###
 network = False                                                     # use network disk of NS [True] or local disk [False]
 useAPI = False                                                      # use API functionality to access data
 generateData = False                                                # generate new data to be used
 scenario = "generated"                                              # scenarios : ["generated", "De Wupsel", "De Tol"]
-
-# Dates
 startDate = datetime.date(year = 2023, month = 2, day = 23)
 endDate   = datetime.date(year = 2023, month = 3, day = 25)
 
+
+### API SETTINGS ###
+# Username / Password for API session
+username = '__key__'
+password = 'Cy0BNm8p.vpytC2vYPT9g7OKdgxvqggyV0k9zzJVy'
+
+# API URLs
+precipAPI = "730d6675-35dd-4a35-aa9b-bfb8155f9ca7"
+evapAPI   = "e262dc03-f12b-4082-a4f4-7d0534e31fa4"
+demAPI    = "a60ad336-c95b-4fb6-b852-96fc352ee808"
+
+
+### MODEL SETTINGS ###
 # Include processes
 includePrecipitation = True
 includeEvaporation   = True
@@ -32,10 +43,6 @@ fluxes    = []
 # Set values
 initialWaterTable = 1.30
 resolution       = 1
-
-# Username / Password for API session
-username = '__key__'
-password = 'Cy0BNm8p.vpytC2vYPT9g7OKdgxvqggyV0k9zzJVy'
 
 if scenario == "De Wupsel" or scenario == "De Tol":
     arrayExtent     = 5000
@@ -65,11 +72,6 @@ else:
     path = root_path
     
 output_path = path + f'output/{scenario}/'
-    
-# API URLs
-precipAPI = "730d6675-35dd-4a35-aa9b-bfb8155f9ca7"
-evapAPI   = "e262dc03-f12b-4082-a4f4-7d0534e31fa4"
-demAPI    = "a60ad336-c95b-4fb6-b852-96fc352ee808"
 
 # Create ID variables
 concrete       = [2, 4, 6, 8, 10, 14, 15, 16, 25, 28, 35, 166, 253]
