@@ -79,3 +79,9 @@ green          = [40, 41, 43, 44, 112, 157]
 water          = [51, 254]
 compacted      = [18]
 other_road     = [29]
+
+### GENERATE DATA SETTINGS ###
+generateDEM     = False                                          # Simulate a new digital elevation map
+generatePrecip  = True                                          # Simulate new precipitation data
+generateEvapo   = True                                          # Simulate new evaporation data
+saveTemp        = False                                          # Save the temperature GeoTiff, this determines the amount of variables and thus speed.

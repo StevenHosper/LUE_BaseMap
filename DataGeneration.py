@@ -33,7 +33,7 @@ Options:
 )
 
 
-class dataGeneration(): 
+class generate(): 
     def __init__(self):
         """
         The initial calculation phase. Get API access for this session and interpret command line arguments.
@@ -54,12 +54,6 @@ class dataGeneration():
         print(f'partition: {config.partitionShape}', f'array: {config.arrayShape}')
         
         self.path = f'{config.path}/data/generated/{config.arrayExtent}/'
-        
-        self.empty = lfr.create_array(config.arrayShape,
-                                config.partitionShape,
-                                dtype = np.dtype(np.float32),
-                                fill_value = 0,
-                                )
         
         print("__init__ done")
     
@@ -84,16 +78,16 @@ class dataGeneration():
                                 fill_value = 5,
                                 )
     
-    def dem_simulation(self, output_name):
+    def dem(self, output_name):
         """
         Create a random uniform map, able to function as a Digital Elevation Map and sade it in the \
         generated data directory.
         """
-        dem = lfr.uniform(self.empty, np.float32, 0, 1)
+        dem = lfr.uniform(self.lue_zero(), np.float32, 0, 1)
         lfr.to_gdal(dem, f'{self.path}{output_name}_{config.arrayExtent}.tiff')
         return dem
     
-    def ldd_simulation(self, dem, output_name):
+    def ldd(self, dem, output_name):
         """
         Create a local drain direction map based on the dem given and safe it to a tiff file in the generated \
         data directory.
@@ -107,10 +101,10 @@ class dataGeneration():
         Assign $% of the cells to become rain producing cells.
         """
         fraction_raincells = 0.05                                           # Determine the percentage of raincells in the array
-        raincells = lfr.uniform(self.empty, np.float32, 0, 1) <= fraction_raincells
+        raincells = lfr.uniform(self.lue_zero(), np.float32, 0, 1) <= fraction_raincells
         return raincells
     
-    def precipitation_simulation(self, raincells):
+    def precipitation(self, raincells):
         """
         Simulate precipitation based on kernels and random assigned cells. For now \
         this functions as a simple method to have varied rainclouds that produce rain.
@@ -131,7 +125,7 @@ class dataGeneration():
         lRain = nr_raincells_nearby > 3
         
         random = max(0, np.random.randint(0, 20) - 10)
-        rain_value = lfr.uniform(self.empty, np.float32, 0, 0.3)
+        rain_value = lfr.uniform(self.lue_zero(), np.float32, 0, 0.3)
         
         rain = lfr.where(sRain, rain_value, 0)
         rain = lfr.where(mRain, rain_value*2, rain)
@@ -139,7 +133,7 @@ class dataGeneration():
         
         return rain 
         
-    def temp_simulation(self, temperature):
+    def temp(self, temperature):
         """
         Assign a random value between -5 and 35 to the region as a temperature indication \
         if no temperature was assigned prior. Otherwise change the temperature with a tenth \
@@ -179,18 +173,9 @@ class dataGeneration():
      
     @lfr.runtime_scope 
     def simulate(self):
-        # Settings
-        self.start_of_year = datetime.date(year = 2023, month = 1, day = 1)
-        date = datetime.date(year = 2023, month = 2, day = 23)          # Define a starting date
-        timeperiod     = 31                                             # The time period in timesteps (=days)
-        simulate_dem   = False                                          # Simulate a new digital elevation map
-        simulate_rain  = True                                          # Simulate new precipitation data
-        simulate_evap  = True                                          # Simulate new evaporation data
-        save_temp      = False                                          # Save the temperature GeoTiff, this determines the amount of variables and thus speed.
-        
-        if simulate_dem:
-            dem = self.dem_simulation("dem")
-            ldd = self.ldd_simulation(dem, "ldd")
+        if config.generateDEM:
+            dem = self.dem("dem")
+            ldd = self.ldd(dem, "ldd")
         
         raincells = self.initialize_raincells()                         # Assigns random cells that will produce rain
         
@@ -199,31 +184,34 @@ class dataGeneration():
         
         # Calculate the amount of rainfall and precipitation for each of the days in the timeperiod
         for i in range(int((config.endDate - config.startDate).days)):
-            print(f'Generating data for day {i + 1}. \n {timeperiod - i - 1} to go.')
+            print(f'Generating data for day {i + 1}.')
             # Rainfall generation per day
-            if simulate_rain:
+            if config.generatePrecip:
                 if i < 5:
-                    rain = self.precipitation_simulation(raincells)
+                    rain = self.precipitation(raincells)
                     lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
                 elif 12 > i > 8:
-                    rain = self.precipitation_simulation(raincells)
+                    rain = self.precipitation(raincells)
                     lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
                 elif 23 > i > 18:
-                    rain = self.precipitation_simulation(raincells)
+                    rain = self.precipitation(raincells)
                     lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
                 else:
-                    rain = self.empty
+                    rain = self.lue_zero()
                     lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
             
-            # Temperature and evaporation generation per day
-            if simulate_evap:
-                temperature = self.temp_simulation(temperature)
+            if config.generateEvapo:
+                # First generate the temperature
+                temperature = self.temp(temperature)
                 temperature_2d = lfr.create_array(config.arrayShape,
                                            config.partitionShape,
                                            dtype = np.float32,
                                            fill_value = temperature)
-                lfr.to_gdal(temperature_2d, f'{self.path}temperature_{config.arrayExtent}_{date}.tiff')
                 
+                if config.saveTemp:             # IF the temperature should be saved, save the temperature.
+                    lfr.to_gdal(temperature_2d, f'{self.path}temperature_{config.arrayExtent}_{date}.tiff')
+                
+                # Generature the evaporation based on the temperature and save it.
                 evaporation = self.pet_Hamon(temperature, date)
                 lfr.to_gdal(evaporation, f'{self.path}potential_evaporation_{config.arrayExtent}_{date}.tiff')
             
@@ -255,7 +243,7 @@ lfr.start_hpx_runtime(cfg)
 # localities. Never perform Python code on the other localities than the
 # root locality unless you know what you are doing.
 if __name__ == "__main__":
-    main = dataGeneration()
+    main = generate()
     main.simulate()
     
 print("--- %s seconds ---" % (time.time() - start_time))
