@@ -38,9 +38,9 @@ class get():
         dates = f'{date}T11:00:00Z'
         
         # The different variables available with their corresponding Lizard rasters
-        urls = {'precipitation': configuration.precipAPI, \
-                'evaporation'  : configuration.evapAPI,
-                'dem'          : configuration.demAPI
+        urls = {'precipitation'  : configuration.precipAPI, \
+                'pot_evaporation': configuration.evapAPI,
+                'dem'            : configuration.demAPI
                 }
         
         url = f'https://demo.lizard.net/api/v4/rasters/{urls[variable]}/data/'
@@ -69,6 +69,7 @@ class get():
         # Assign a memory file to store the api content
         mem_file = f"/vsimem/{uid.uuid4()}.tif"
         gdal.FileFromMemBuffer(mem_file, pull.content)
+        
         data = lfr.from_gdal(mem_file, configuration.partitionShape)
         return data
     
@@ -161,7 +162,7 @@ class get():
         # Evaporation
         if configuration.includeEvaporation:
             if configuration.useAPI:
-                pot_evaporation   = get.apiTemporal(date, 'potential_evaporation', session)
+                pot_evaporation   = get.apiTemporal(date, 'pot_evaporation', session)
             else:
                 pot_evaporation   = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'potential_evaporation')
         else:
