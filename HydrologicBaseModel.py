@@ -57,28 +57,6 @@ class mainModel():
 
         print(f'partition: {config.partitionShape}', f'array: {config.arrayShape}')
         
-        # Create useful single value arrays
-        # TO-DO: Incorporate this somewhere else
-        # Zero, for empty cells or unincluded variables
-        self.zero = lfr.create_array(config.arrayShape,
-                                    config.partitionShape,
-                                    dtype = np.dtype(np.float32),
-                                    fill_value = 0,
-                                    )
-        # One, for additions
-        self.ones = lfr.create_array(config.arrayShape,
-                                    config.partitionShape,
-                                    dtype=np.float32,
-                                    fill_value=1,
-                                    )
-                
-        # For the ldd direction being towards the cell itself (pit)
-        self.sink = lfr.create_array(config.arrayShape,
-                                    config.partitionShape,
-                                    dtype = np.dtype(np.uint8),
-                                    fill_value = 5,
-                                    )
-        
         print("__init__ done")
     
     
@@ -100,11 +78,11 @@ class mainModel():
         lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/initial_water_height.tiff')
 
         # Access the data from the directory or the API dependend on the settings
-        precipitation     = data.get.precipitation(current_date, self.s, self.zero)
-        pot_evaporation   = data.get.pot_evaporation(current_date, self.s, self.zero)   
-        pot_infiltration  = data.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, self.zero)
-        percolation       = data.get.percolation(self.dem, self.groundWaterHeight, Ks, self.zero)
-        i_ratio, e_ratio  = data.get.ieRatio(pot_evaporation, pot_infiltration, self.ones, self.zero)
+        precipitation     = data.get.precipitation(current_date, self.s, DataGeneration.dataGeneration.lue_zero())
+        pot_evaporation   = data.get.pot_evaporation(current_date, self.s, DataGeneration.dataGeneration.lue_zero())   
+        pot_infiltration  = data.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, DataGeneration.dataGeneration.lue_zero())
+        percolation       = data.get.percolation(self.dem, self.groundWaterHeight, Ks, DataGeneration.dataGeneration.lue_zero())
+        i_ratio, e_ratio  = data.get.ieRatio(pot_evaporation, pot_infiltration, DataGeneration.dataGeneration.lue_one(), DataGeneration.dataGeneration.lue_zero())
 
         # Add precipitation to the watertable
         self.waterheight = self.waterheight + precipitation
@@ -123,7 +101,7 @@ class mainModel():
         
         # Make sure the waterheight is not below zero as this is not possible.
         # There can be no evaporation without water.
-        self.waterheight = lfr.where(self.waterheight < self.zero, self.zero, self.waterheight)
+        self.waterheight = lfr.where(self.waterheight < DataGeneration.dataGeneration.lue_zero(), DataGeneration.dataGeneration.lue_zero(), self.waterheight)
         self.height = self.waterheight + self.dem
         
         # Create file with current situation of the water balance
@@ -144,10 +122,10 @@ class mainModel():
             ldd = lfr.d8_flow_direction(self.height)
             
             # Access the data from the directory or the API dependend on the settings
-            precipitation     = data.get.precipitation(current_date, self.s, self.zero)
-            pot_evaporation   = data.get.pot_evaporation(current_date, self.s, self.zero)
-            pot_infiltration  = data.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, self.zero)
-            percolation       = data.get.percolation(self.dem, self.groundWaterHeight, Ks, self.zero)
+            precipitation     = data.get.precipitation(current_date, self.s, DataGeneration.dataGeneration.lue_zero())
+            pot_evaporation   = data.get.pot_evaporation(current_date, self.s, DataGeneration.dataGeneration.lue_zero())
+            pot_infiltration  = data.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, DataGeneration.dataGeneration.lue_zero())
+            percolation       = data.get.percolation(self.dem, self.groundWaterHeight, Ks, DataGeneration.dataGeneration.lue_zero())
             
             
             # Ratio of evaporation compared to infiltration
@@ -155,8 +133,8 @@ class mainModel():
                 i_ratio = lfr.divide(pot_infiltration, lfr.add(pot_evaporation, pot_infiltration))
                 e_ratio = lfr.divide(pot_evaporation, lfr.add(pot_evaporation, pot_infiltration))
             else:
-                i_ratio = self.zero
-                e_ratio = self.zero
+                i_ratio = DataGeneration.dataGeneration.lue_zero()
+                e_ratio = DataGeneration.dataGeneration.lue_zero()
             
             # Add precipitation to the watertable
             self.waterheight = self.waterheight + precipitation
@@ -178,7 +156,7 @@ class mainModel():
             
             self.groundWaterHeight, seepage = update.update.groundWaterHeight(
                 self.dem, Ks, self.waterheight, self.groundWaterHeight, infiltration, \
-                percolation, self.zero
+                percolation, DataGeneration.dataGeneration.lue_zero()
                 )
 
             # Remove the evaporation and infiltration from the waterheight as it is lost to the 
@@ -187,7 +165,7 @@ class mainModel():
             self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
             
             # Waterheight can never be lower than zero.
-            self.waterheight = lfr.where(self.waterheight < self.zero, self.zero, self.waterheight)
+            self.waterheight = lfr.where(self.waterheight < DataGeneration.dataGeneration.lue_zero(), DataGeneration.dataGeneration.lue_zero(), self.waterheight)
             
             # Adjust the concurrent height
             self.height = self.dem + self.waterheight
@@ -210,11 +188,11 @@ class mainModel():
         self.ldd = lfr.d8_flow_direction(self.dem)
         
         # Create the hydraulic conductivity variable
-        Ks       = data.get.Ks(soilType, self.ones)
+        Ks       = data.get.Ks(soilType, DataGeneration.dataGeneration.lue_one())
         lfr.to_gdal(Ks, config.path + f'/output/{config.scenario}/Ks.tiff')
         
         # Create the land-use coefficient variable
-        landC   = data.get.landC(landUse, self.ones)
+        landC   = data.get.landC(landUse, DataGeneration.dataGeneration.lue_one())
         lfr.to_gdal(landC, config.path + f'/output/{config.scenario}/landUse_coefficients.tiff')
         
         # Initialize the static

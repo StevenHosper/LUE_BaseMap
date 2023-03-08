@@ -6,21 +6,14 @@ Created on Wed Feb 15 10:03:54 2023
 """
 
 import lue.framework as lfr
-import docopt
 import numpy as np
-import os, getpass
+import os
 import pandas as pd
-from pandas.io.json import json_normalize
 import requests
-import csv, json
 import datetime
 import sys
-import matplotlib.pyplot as plt
 import math as math
 import time
-import uuid as uid
-import pcraster as pcr
-from osgeo import gdal
 import configuration as config
 
 
@@ -28,14 +21,13 @@ import configuration as config
 start_time = time.time()
 
 usage = """\
-Calculate the soil loss of an area using the USLE
+Generate data when it is not available for the model
 
 Usage:
-    {command} <array_cells> <partition_cells>
+    {command}
 
 Options:
-    <array_cells>       Size of one side of the array
-    <partition_cells>   Size of one side of the partitions
+    {command} : --hpx:thread = nrCoresUsed 
 """.format(
     command=os.path.basename(sys.argv[0])
 )
@@ -70,7 +62,28 @@ class dataGeneration():
                                 )
         
         print("__init__ done")
-       
+    
+    def lue_zero():
+        return lfr.create_array(config.arrayShape,
+                                config.partitionShape,
+                                dtype = np.dtype(np.float32),
+                                fill_value = 0,
+                                )
+    
+    def lue_one():
+        return lfr.create_array(config.arrayShape,
+                                config.partitionShape,
+                                dtype = np.dtype(np.float32),
+                                fill_value = 1,
+                            )
+
+    def lue_sink():
+        return lfr.create_array(config.arrayShape,
+                                config.partitionShape,
+                                dtype = np.dtype(np.uint8),
+                                fill_value = 5,
+                                )
+    
     def dem_simulation(self, output_name):
         """
         Create a random uniform map, able to function as a Digital Elevation Map and sade it in the \
