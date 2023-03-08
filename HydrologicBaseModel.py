@@ -40,18 +40,7 @@ Options:
 
 class mainModel(): 
     def __init__(self):
-        """
-        Summary:
-            The initial calculation phase.
-            Access to API session is granted.
-            Command line arguments are translate to variables.
-            Some useful arrays are created for calculations in the model.
-        """
-
-        print(f'partition: {config.partitionShape}', f'array: {config.arrayShape}')
-        
-        print("__init__ done")
-    
+        pass
     
     def static(self, current_date: datetime.date, path: str, initialWaterTable: float, Ks, landC, landUse):
         # Print the start date for logging purposes

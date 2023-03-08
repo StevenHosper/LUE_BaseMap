@@ -67,10 +67,13 @@ class get():
         pull.raise_for_status()
         
         # Assign a memory file to store the api content
-        mem_file = f"/vsimem/{uid.uuid4()}.tif"
-        gdal.FileFromMemBuffer(mem_file, pull.content)
+        input_mem_file = f"/vsimem/input_{uid.uuid4()}.tif"
+        output_mem_file = f"/vsimem/output_{uid.uuid4()}.tif"
+        options = gdal.TranslateOptions(outputType= gdal.GDT_Float32)
+        gdal.FileFromMemBuffer(input_mem_file, pull.content)
+        gdal.Translate(output_mem_file, input_mem_file, options = options)
         
-        data = lfr.from_gdal(mem_file, configuration.partitionShape)
+        data = lfr.from_gdal(output_mem_file, configuration.partitionShape)
         return data
     
     def localTemporal(path: str, date: datetime.date, variable: str) -> object:
