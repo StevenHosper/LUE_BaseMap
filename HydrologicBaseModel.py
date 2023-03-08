@@ -43,7 +43,7 @@ class mainModel():
     def __init__(self):
         pass
     
-    def static(self, current_date: datetime.date, path: str, initialWaterTable: float, Ks, landC, landUse):
+    def static(self, current_date: datetime.date, initialWaterTable: float, Ks, landC, landUse):
         # Print the start date for logging purposes
         print(f'The startdate is: {current_date}')
         
@@ -94,8 +94,7 @@ class mainModel():
     
     
 
-    def iterate(self, start_date: datetime.date, end_date: datetime.date, path: str, hydraulic_head: float, Ks, landC, landUse):
-        
+    def iterate(self, start_date: datetime.date, end_date: datetime.date, Ks, landC):
         for i in range(int((end_date - start_date).days)):
             # Print the time to keep track while the program runs
             print(f'The date is: {start_date + datetime.timedelta(1+i)}')
@@ -137,7 +136,7 @@ class mainModel():
             # ROUTING
             self.waterheight = self.waterheight + lfr.upstream(ldd, flux) - flux
             
-            self.groundWaterHeight, seepage = update.update.groundWaterHeight(
+            self.groundWaterHeight = update.update.groundWaterHeight(
                 self.dem, Ks, self.waterheight, self.groundWaterHeight, infiltration, \
                 percolation, dG.generate.lue_zero()
                 )
@@ -179,10 +178,10 @@ class mainModel():
         lfr.to_gdal(landC, config.path + f'/output/{config.scenario}/landUse_coefficients.tiff')
         
         # Initialize the static
-        self.static(config.startDate, config.path, config.initialWaterTable, Ks, landC, landUse)
+        self.static(config.startDate, config.initialWaterTable, Ks, landC, landUse)
         print("static completed")
         
-        self.iterate(config.startDate, config.endDate, config.path, config.initialWaterTable, Ks, landC, landUse)
+        self.iterate(config.startDate, config.endDate, Ks, landC)
         print("iteration completed")
         return 0
 

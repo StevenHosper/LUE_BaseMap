@@ -13,6 +13,7 @@ import uuid as uid
 from osgeo import gdal
 import configuration as config
 import requests
+from pcraster import aguila
 
 class get():
     def apiSession():
@@ -99,7 +100,7 @@ class get():
     
     def Ks(soilType, dummy):
         # Assign K for de Wupsel
-        Ks = dummy
+        Ks = dummy * 0.05
         for i in range(20):
             if i == 2:
                 Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
@@ -114,13 +115,13 @@ class get():
             if i == 13:
                 Ks = lfr.where(soilType == i, 2.0*10**-1, Ks)           # Hydraulic conductivity in m/day
             if i == 15:
-                Ks = lfr.where(soilType == i, 5.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+                Ks = lfr.where(soilType == i, 6.0*10**-1, Ks)           # Hydraulic conductivity in m/day
             if i == 16:
                 Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
+            if i == 17:
+                Ks = lfr.where(soilType == i, 4.0*10**-2, Ks)           # Hydraulic conductivity in m/day
             if i == 19:
                 Ks = lfr.where(soilType == i, 3.0*10**-2, Ks)           # Hydraulic conductivity in m/day
-            else:
-                Ks = lfr.where(soilType == i, 5.0*10**-2, Ks)           # Hydraulic conductivity in m/day
         return Ks
     
     def landC(landUse, dummy):
@@ -184,7 +185,7 @@ class get():
     def percolation(dem, groundWaterHeight, Ks, zero):
         if configuration.includePercolation:
             percolation = lfr.where(dem < 0, zero, \
-                                    Ks * 0.3 * ((groundWaterHeight - 0.5 * dem) / dem))  # If the dem is negative, there is no percolation
+                                    Ks * ((groundWaterHeight - 0.5 * dem) / dem))  # If the dem is negative, there is no percolation
             percolation = lfr.where(percolation < 0, zero, percolation)                            # If the percolation is negative, there is no percolation
         else:
             percolation = zero
