@@ -34,7 +34,7 @@ includePrecipitation = True
 includeEvaporation   = True
 includeInfiltration  = True
 includePercolation   = True
-includeGroundFlow    = False
+includeGroundFlow    = False                                              # Currently not working
 
 # Report
 variables = ['waterheight', 'groundWaterHeight']

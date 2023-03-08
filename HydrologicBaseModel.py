@@ -6,6 +6,7 @@ Created on Wed Feb 15 2023
 """
 # The HydrologicBaseModel
 import lue.framework as lfr
+import lue.pcraster as lpr
 import numpy as np
 import math as math
 import os
@@ -66,9 +67,7 @@ class mainModel():
         pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, dG.generate.lue_zero())
         percolation, part = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
         i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration, dG.generate.lue_one(), dG.generate.lue_zero())
-
-        lfr.to_gdal(part, config.path + f'/output/{config.scenario}/percolation_{current_date}.tiff')
-
+        
         # Add precipitation to the watertable
         self.waterheight = self.waterheight + precipitation
 
@@ -78,6 +77,12 @@ class mainModel():
         # Calculate the actual evaporation and infiltration
         evaporation  = lfr.where(self.waterheight >= ie, pot_evaporation, self.waterheight*e_ratio)
         infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
+        
+        # Runoff test
+        runoff = update.update.runoff(precipitation, evaporation, infiltration)
+        
+        discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_zero(), 1.5, 0.6, 1.0, dG.generate.lue_one())
+        
         
         # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
         # *Note --> the rain now happens 'first', depending on when the rain falls during the day there might not be time to evaporate, but this is currently not taken into account.
@@ -90,7 +95,7 @@ class mainModel():
         self.height = self.waterheight + self.dem
         
         # Create file with current situation of the water balance
-        variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight}
+        variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight, "discharge": discharge}
         reporting.report.static(current_date, variables, config.output_path)
         return 0
     
@@ -163,7 +168,8 @@ class mainModel():
         soilType = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)
         
         # Create initial ldd
-        self.ldd = lfr.d8_flow_direction(self.dem)
+        self.ldd = lpr.lddcreate(self.dem, 9999999, 9999999, 9999999, 9999999)
+        lfr.to_gdal(self.ldd, config.path + f'/output/{config.scenario}/ldd.tiff')
         
         # Create the hydraulic conductivity variable
         Ks       = dA.get.Ks(soilType, dG.generate.lue_one())
@@ -177,6 +183,7 @@ class mainModel():
         self.static(config.startDate, config.initialWaterTable, Ks, landC, landUse)
         print("static completed")
         
+        sys.exit()
         self.iterate(config.startDate, config.endDate, Ks, landC)
         print("iteration completed")
         return 0

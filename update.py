@@ -8,10 +8,10 @@ import lue.framework as lfr
 import configuration as config
 
 class update():
-    def waterHeight(ldd, waterHeight, precipitation, evaporation,\
-                    infiltration, flux, seepage):
-        waterHeight = waterHeight
-        return waterHeight
+    def runoff(precipitation, evaporation,\
+                    infiltration):
+        runoff = precipitation - evaporation - infiltration
+        return runoff
     
     def groundWaterHeight(dem, Ks, waterHeight, groundWaterHeight,\
                           infiltration, percolation, zero):
@@ -22,7 +22,8 @@ class update():
         
         # Calculate the groundwater flow
         if config.includeGroundFlow:
-            groundflow = Ks * (groundhead - lfr.downstream(groundWaterLDD, groundhead))                               # Q = k * i * A
+            # Currently not working
+            groundflow = None                              # Q = k * i * A
         else:
             groundflow = zero
         
