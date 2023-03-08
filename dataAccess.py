@@ -184,12 +184,14 @@ class get():
     
     def percolation(dem, groundWaterHeight, Ks, zero):
         if configuration.includePercolation:
+            part = (groundWaterHeight - 0.9*dem)/dem
+            part = lfr.where(part <= 0, zero, part)
             percolation = lfr.where(dem < 0, zero, \
-                                    Ks * ((groundWaterHeight - 0.5 * dem) / dem))  # If the dem is negative, there is no percolation
+                                    Ks * part)                                                # If the dem is negative, there is no percolation
             percolation = lfr.where(percolation < 0, zero, percolation)                            # If the percolation is negative, there is no percolation
         else:
             percolation = zero
-        return percolation
+        return percolation, part
     
     def ieRatio(pot_evaporation, pot_infiltration, ones, zero):
         if configuration.includeEvaporation and configuration.includeInfiltration:

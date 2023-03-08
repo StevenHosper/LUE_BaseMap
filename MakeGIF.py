@@ -67,7 +67,7 @@ def main():
     
     # Implemenet directories for both work and home adress.
     at_work = False
-    variable = 'groundwater'
+    variable = 'percolation'
     if at_work:
         raster_pathname = f'{root_path}/output/{config.scenario}/{variable}'
         animation_pathname = f'{root_path}/output/{config.scenario}/{variable}.gif'
@@ -80,7 +80,7 @@ def main():
     nr_rasters = 30
     assert nr_rasters >= 0
     
-    create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 10)
+    create_animation(raster_pathname, nr_rasters, animation_pathname, -0.5, 1)
     
     # Second animation
     variable = 'waterheight'
@@ -96,7 +96,7 @@ def main():
     nr_rasters = 30
     assert nr_rasters >= 0
 
-    create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 2)
+    create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 1)
 
 
 if __name__ == "__main__":

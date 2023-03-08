@@ -64,8 +64,10 @@ class mainModel():
         precipitation     = dA.get.precipitation(current_date, dA.get.apiSession(), dG.generate.lue_zero())
         pot_evaporation   = dA.get.pot_evaporation(current_date, dA.get.apiSession(), dG.generate.lue_zero())   
         pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, dG.generate.lue_zero())
-        percolation       = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
+        percolation, part = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
         i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration, dG.generate.lue_one(), dG.generate.lue_zero())
+
+        lfr.to_gdal(part, config.path + f'/output/{config.scenario}/percolation_{current_date}.tiff')
 
         # Add precipitation to the watertable
         self.waterheight = self.waterheight + precipitation
@@ -107,16 +109,10 @@ class mainModel():
             precipitation     = dA.get.precipitation(current_date, dA.get.apiSession(), dG.generate.lue_zero())
             pot_evaporation   = dA.get.pot_evaporation(current_date, dA.get.apiSession(), dG.generate.lue_zero())
             pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, dG.generate.lue_zero())
-            percolation       = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
-            
-            
-            # Ratio of evaporation compared to infiltration
-            if config.includeEvaporation and config.includeInfiltration:
-                i_ratio = lfr.divide(pot_infiltration, lfr.add(pot_evaporation, pot_infiltration))
-                e_ratio = lfr.divide(pot_evaporation, lfr.add(pot_evaporation, pot_infiltration))
-            else:
-                i_ratio = dG.generate.lue_zero()
-                e_ratio = dG.generate.lue_zero()
+            percolation, part = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
+            i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration, dG.generate.lue_one(), dG.generate.lue_zero())
+
+            lfr.to_gdal(part, config.path + f'/output/{config.scenario}/percolation_{current_date}.tiff')
             
             # Add precipitation to the watertable
             self.waterheight = self.waterheight + precipitation
