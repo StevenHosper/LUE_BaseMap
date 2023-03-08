@@ -20,6 +20,7 @@ import getData as data
 import MakeGIF
 import reporting
 import update
+import DataGeneration
 
 
 # Timer to add some measure of functionality to the program
@@ -247,8 +248,15 @@ lfr.start_hpx_runtime(cfg)
 # localities. Never perform Python code on the other localities than the
 # root locality unless you know what you are doing.
 if lfr.on_root_locality():
+    # Check if data should be generated
+    if config.generateData:
+        DataGeneration.dataGenerate.main()
+    
+    # Run the main model
     main = mainModel()
     main.simulate()
+    
+    # Process the results into a gif
     MakeGIF.main()
     
 print("--- %s seconds ---" % (time.time() - start_time))

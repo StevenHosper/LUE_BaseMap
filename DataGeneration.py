@@ -185,7 +185,7 @@ class dataGeneration():
         
         
         # Calculate the amount of rainfall and precipitation for each of the days in the timeperiod
-        for i in range(timeperiod):
+        for i in range(int((config.endDate - config.startDate).days)):
             print(f'Generating data for day {i + 1}. \n {timeperiod - i - 1} to go.')
             # Rainfall generation per day
             if simulate_rain:

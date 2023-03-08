@@ -8,15 +8,11 @@ Created on Mon Mar 6 2023
 import datetime
 import os
 
-# Use local disk or network disk
-network = False
-
-# Use API
-useAPI = False
-
-# Configuration file
-# scenarios : ["generated", "De Wupsel", "De Tol"]
-scenario = "generated"
+# General settings
+network = False                                                     # use network disk of NS [True] or local disk [False]
+useAPI = False                                                      # use API functionality to access data
+generateData = False                                                # generate new data to be used
+scenario = "generated"                                              # scenarios : ["generated", "De Wupsel", "De Tol"]
 
 # Dates
 startDate = datetime.date(year = 2023, month = 2, day = 23)
