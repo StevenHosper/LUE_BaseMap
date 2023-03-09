@@ -80,12 +80,16 @@ class mainModel():
         evaporation  = lfr.where(self.waterheight >= ie, pot_evaporation, self.waterheight*e_ratio)
         infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
         
-        # Runoff test
+        
+        ###### TEST FUNCTIONS, NOT WORKING PROPERLY YET ######
+        
         runoff = update.update.runoff(precipitation, evaporation, infiltration)
-        
+        runoff = lfr.where(runoff >= 0, runoff, 0.0001)
         self.ldd = lfr.where(runoff >= -100, self.ldd, 5)
-        
         discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 8000, dG.generate.lue_one())
+        
+        ######################################################
+        
         
         # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
         # *Note --> the rain now happens 'first', depending on when the rain falls during the day there might not be time to evaporate, but this is currently not taken into account.
@@ -133,12 +137,12 @@ class mainModel():
             infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
             
             # Check the difference in dem (as this determines the total height that should be filled to create an equal surface)
-            height_difference = self.height - lfr.downstream(ldd, self.height)
+            height_difference = self.height - lfr.downstream(self.ldd, self.height)
             potential_flux = lfr.where(height_difference > self.waterheight, 0.5*self.waterheight, 0.5*height_difference)
-            flux = lfr.where(ldd != 5, potential_flux, 0)
+            flux = lfr.where(self.ldd != 5, potential_flux, 0)
             
             # ROUTING
-            self.waterheight = self.waterheight + lfr.upstream(ldd, flux) - flux
+            self.waterheight = self.waterheight + lfr.upstream(self.ldd, flux) - flux
             
             self.groundWaterHeight = update.update.groundWaterHeight(
                 self.dem, Ks, self.waterheight, self.groundWaterHeight, infiltration, \
@@ -150,8 +154,15 @@ class mainModel():
             self.waterheight = self.waterheight - evaporation - infiltration
             self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
             
+            
+            ####### TEST FUNCTIONS, NOT WORKING PROPERLY YET ######
+            
             runoff = update.update.runoff(precipitation, evaporation, infiltration)
+            runoff = lfr.where(runoff >= 0, runoff, 0.0001)
             discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 8000, dG.generate.lue_one())
+            
+            #######################################################
+            
             
             # Waterheight can never be lower than zero.
             self.waterheight = lfr.where(self.waterheight < dG.generate.lue_zero(), dG.generate.lue_zero(), self.waterheight)

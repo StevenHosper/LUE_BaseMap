@@ -36,6 +36,13 @@ class generate():
         
         print("__init__ done")
     
+    def boundaryCell():
+        array = np.zeros((config.arrayExtent - 2, config.arrayExtent - 2), dtype= np.uint8)
+        boundaryCell = np.pad(array, pad_width=1, mode='constant', constant_values=1)
+        boundaryCell = lfr.from_numpy(boundaryCell, config.partitionShape)
+        lfr.to_gdal(boundaryCell, config.path + 'boundaryCell.tiff')
+        return boundaryCell
+    
     def lue_zero():
         return lfr.create_array(config.arrayShape,
                                 config.partitionShape,
@@ -225,4 +232,5 @@ lfr.start_hpx_runtime(cfg)
 # root locality unless you know what you are doing.
 if __name__ == "__main__":
     main = generate()
-    main.simulate()
+    #main.simulate()
+    generate.boundaryCell()
