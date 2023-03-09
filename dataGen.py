@@ -104,7 +104,7 @@ class generate():
         lRain = nr_raincells_nearby > 3
         
         random = max(0, np.random.randint(0, 20) - 10)
-        rain_value = lfr.uniform(generate.lue_zero(), np.float32, 0, 0.3)
+        rain_value = lfr.uniform(generate.lue_zero(), np.float32, 0, 0.03)
         
         rain = lfr.where(sRain, rain_value, 0)
         rain = lfr.where(mRain, rain_value*2, rain)
@@ -162,9 +162,9 @@ class generate():
         
         
         # Calculate the amount of rainfall and precipitation for each of the days in the timeperiod
-        for i in range(int((config.endDate - config.startDate).days)):
+        for i in range(int((config.endDate - config.startDate).days) + 1):
             print(f'Generating data for day {i + 1}.')
-            date = config.startDate + datetime.timedelta(1+i)
+            date = config.startDate + datetime.timedelta(i)
             print(date)
             # Rainfall generation per day
             if config.generatePrecip:
