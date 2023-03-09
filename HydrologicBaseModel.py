@@ -60,6 +60,7 @@ class mainModel():
         #         and apply these. However, that is not yet possible.
         self.groundWaterHeight = self.dem - 0.1
         self.groundWaterHeight = lfr.where(landUse == 51, self.dem, self.groundWaterHeight)
+        self.groundWaterHeight = lfr.where(dG.generate.boundaryCell(), self.dem, self.groundWaterHeight)
         
         lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/initial_water_height.tiff')
 
@@ -137,17 +138,17 @@ class mainModel():
             infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
             
             # Check the difference in dem (as this determines the total height that should be filled to create an equal surface)
-            height_difference = self.height - lfr.downstream(self.ldd, self.height)
+            height_difference = self.height - lfr.downstream(ldd, self.height)
             potential_flux = lfr.where(height_difference > self.waterheight, 0.5*self.waterheight, 0.5*height_difference)
-            flux = lfr.where(self.ldd != 5, potential_flux, 0)
+            flux = lfr.where(ldd != 5, potential_flux, 0)
             
             # ROUTING
-            self.waterheight = self.waterheight + lfr.upstream(self.ldd, flux) - flux
+            self.waterheight = lfr.where(dG.generate.boundaryCell(), self.waterheight + lfr.upstream(ldd, flux) - flux, self.waterheight)
             
-            self.groundWaterHeight = update.update.groundWaterHeight(
+            self.groundWaterHeight = lfr.where(dG.generate.boundaryCell(), update.update.groundWaterHeight(
                 self.dem, Ks, self.waterheight, self.groundWaterHeight, infiltration, \
                 percolation, dG.generate.lue_zero()
-                )
+                ), self.groundWaterHeight)
 
             # Remove the evaporation and infiltration from the waterheight as it is lost to the 
             # atmosphere or groundwater.
