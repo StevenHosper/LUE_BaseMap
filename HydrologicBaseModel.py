@@ -13,6 +13,8 @@ import os
 import datetime
 import sys
 import time
+import pcraster as pcr
+from osgeo import gdal
 
 # Own functions
 # TO-DO: Reformat by the use of: from ... import ... as ...
@@ -82,8 +84,9 @@ class mainModel():
         runoff = update.update.runoff(precipitation, evaporation, infiltration) *100
         runoff = lfr.where(runoff >= 0, runoff, 0.001)
         
-        discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one(), 1.5, 0.6, 1.0, dG.generate.lue_one())
+        self.ldd = lfr.where(runoff >= -100, self.ldd, 5)
         
+        discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 50, dG.generate.lue_one())
         
         # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
         # *Note --> the rain now happens 'first', depending on when the rain falls during the day there might not be time to evaporate, but this is currently not taken into account.
@@ -98,6 +101,7 @@ class mainModel():
         # Create file with current situation of the water balance
         variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight, "runoff": runoff, "discharge": discharge}
         reporting.report.static(current_date, variables, config.output_path)
+        sys.exit()
         return 0
     
     
@@ -167,11 +171,19 @@ class mainModel():
         self.dem  = lfr.from_gdal(config.path + f'/data/{config.scenario}/dem.tiff', config.partitionShape)
         landUse  = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)
         soilType = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)
+
+        # Attempt with pcraster to make ldd
+        pcr.setclone(config.arrayExtent, config.arrayExtent, config.resolution, 0, 0)
+        pcr.setglobaloption("lddin")
+        ds = gdal.Open(config.path + f'/data/{config.scenario}/dem.tiff')
+        raster = ds.GetRasterBand(1)
+        a = raster.ReadAsArray()
+        result = pcr.numpy2pcr(pcr.Scalar, a, 999)
+        ldd = pcr.lddcreate(result, 9999999, 500, 9999999, 9999999)
+        pcr.report(ldd, config.path + f'/output/{config.scenario}/ldd_pcr.tiff')
         
-        # Create initial ldd
-        self.ldd = lpr.lddcreate(self.dem, 9999999, 9999999, 9999999, 9999999)
-        lfr.to_gdal(self.ldd, config.path + f'/output/{config.scenario}/ldd.tiff')
-        
+        self.ldd = lfr.from_gdal(config.path + f'/output/{config.scenario}/ldd_pcr.tiff', config.partitionShape)
+
         # Create the hydraulic conductivity variable
         Ks       = dA.get.Ks(soilType, dG.generate.lue_one())
         lfr.to_gdal(Ks, config.path + f'/output/{config.scenario}/Ks.tiff')

@@ -12,7 +12,7 @@ import os
 network      = False                                                    # use network disk of NS [True] or local disk [False]
 useAPI       = False                                                    # use API functionality to access data
 generateData = True                                                    # generate new data to be used
-scenario     = "De Wupsel10"                                            # scenarios : ["generated", "De Wupsel", "De Tol", "De Wupsel10"]
+scenario     = "generated"                                            # scenarios : ["generated", "De Wupsel", "De Tol", "De Wupsel10"]
 startDate    = datetime.date(year = 2023, month = 2, day = 23)
 endDate      = datetime.date(year = 2023, month = 3, day = 25)
 
@@ -66,7 +66,7 @@ elif scenario == "De Wupsel10":
     partitionExtent = 1000
     assert partitionExtent > 0
     partitionShape  = 2 * (partitionExtent,)
-    resolution       = 10
+    resolution      = 1
 else:
     raise("Invalid scenario")
 
