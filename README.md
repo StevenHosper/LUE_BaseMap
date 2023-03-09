@@ -14,12 +14,17 @@ Therefore initially we will work with a array of 1000x1000 and 5000x5000 size.
 This will improve the speed of model development and allow for quick adaptations.
 
 ## Model concept
-The model is planned to incorporate atleast the following processes:
+Currently the model is mainly planned to function for surface water routing.
+This will supply data required by the ModFlow-MetaSwap groundwater model that is currently being used for modelling purposes in general.
+Ideally during this project the coupling will have already occured to make the results of the model more accurate.
+However, as of yet it is not clear how fast development will go, and if LUE is even capable of the attaining accurate results for high-resolution large-scale modelling.
+For now the model is planned to incorporate atleast the following surface processes:
 - Precipitation
 - Evaporation
 - Infiltration
 - Abstraction
 - Injection
 
+If groundwater processes are added, percolation and seepage will be the first to be added.
 A good connection to the groundwater is preferred as many areas in the Netherlands are heavily influenced by groundwaterflows. 
 However, initially to deminish model complexities, groundwater flow will be ignored.
