@@ -81,12 +81,12 @@ class mainModel():
         infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
         
         # Runoff test
-        runoff = update.update.runoff(precipitation, evaporation, infiltration) *100
+        runoff = update.update.runoff(precipitation, evaporation, infiltration)
         runoff = lfr.where(runoff >= 0, runoff, 0.001)
         
         self.ldd = lfr.where(runoff >= -100, self.ldd, 5)
         
-        discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 50, dG.generate.lue_one())
+        discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 100, dG.generate.lue_one())
         
         # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
         # *Note --> the rain now happens 'first', depending on when the rain falls during the day there might not be time to evaporate, but this is currently not taken into account.
@@ -101,7 +101,6 @@ class mainModel():
         # Create file with current situation of the water balance
         variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight, "runoff": runoff, "discharge": discharge}
         reporting.report.static(current_date, variables, config.output_path)
-        sys.exit()
         return 0
     
     
@@ -152,6 +151,9 @@ class mainModel():
             self.waterheight = self.waterheight - evaporation - infiltration
             self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
             
+            runoff = update.update.runoff(precipitation, evaporation, infiltration)
+            discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 100, dG.generate.lue_one())
+            
             # Waterheight can never be lower than zero.
             self.waterheight = lfr.where(self.waterheight < dG.generate.lue_zero(), dG.generate.lue_zero(), self.waterheight)
             
@@ -159,7 +161,7 @@ class mainModel():
             self.height = self.dem + self.waterheight
             
             # Create file with current situation of the water balance
-            variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight}
+            variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight, "runoff": runoff, "discharge": discharge}
             fluxes    = {}
             reporting.report.dynamic(current_date, variables, fluxes, config.output_path)
         return 0

@@ -67,7 +67,7 @@ def main():
     
     # Implemenet directories for both work and home adress.
     at_work = False
-    variable = 'percolation'
+    variable = 'discharge'
     if at_work:
         raster_pathname = f'{root_path}/output/{config.scenario}/{variable}'
         animation_pathname = f'{root_path}/output/{config.scenario}/{variable}.gif'
