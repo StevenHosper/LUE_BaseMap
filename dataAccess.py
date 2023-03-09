@@ -191,6 +191,7 @@ class get():
             percolation = lfr.where(percolation < 0, zero, percolation)                            # If the percolation is negative, there is no percolation
         else:
             percolation = zero
+            part = zero
         return percolation, part
     
     def ieRatio(pot_evaporation, pot_infiltration, ones, zero):

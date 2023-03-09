@@ -82,11 +82,10 @@ class mainModel():
         
         # Runoff test
         runoff = update.update.runoff(precipitation, evaporation, infiltration)
-        runoff = lfr.where(runoff >= 0, runoff, 0.001)
         
         self.ldd = lfr.where(runoff >= -100, self.ldd, 5)
         
-        discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 100, dG.generate.lue_one())
+        discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 8000, dG.generate.lue_one())
         
         # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
         # *Note --> the rain now happens 'first', depending on when the rain falls during the day there might not be time to evaporate, but this is currently not taken into account.
@@ -152,7 +151,7 @@ class mainModel():
             self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
             
             runoff = update.update.runoff(precipitation, evaporation, infiltration)
-            discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 100, dG.generate.lue_one())
+            discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 8000, dG.generate.lue_one())
             
             # Waterheight can never be lower than zero.
             self.waterheight = lfr.where(self.waterheight < dG.generate.lue_zero(), dG.generate.lue_zero(), self.waterheight)

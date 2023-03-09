@@ -33,7 +33,7 @@ demAPI    = "a60ad336-c95b-4fb6-b852-96fc352ee808"
 includePrecipitation = True
 includeEvaporation   = True
 includeInfiltration  = True
-includePercolation   = True
+includePercolation   = False
 includeGroundFlow    = False                                              # Currently not working
 
 # Report
