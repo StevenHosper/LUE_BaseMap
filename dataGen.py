@@ -239,7 +239,12 @@ class generate():
         
         infiltration = Ks * landUseC
         
-        return dem, precipitation, evaporation, infiltration
+        # Report all important variables for use in the model
+        precipitation_lue = lfr.from_numpy(precipitation)
+        evaporation_lue   = lfr.from_numpy(evaporation)
+        infiltration_lue  = lfr.from_numpy(infiltration)
+        
+        return 0
         
         
 
