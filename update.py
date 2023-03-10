@@ -22,8 +22,10 @@ class update():
         
         # Calculate the groundwater flow
         if config.includeGroundFlow:
-            # Currently not working
+            
+            ### Currently not working
             groundflow = None                              # Q = k * i * A
+            
         else:
             groundflow = zero
         

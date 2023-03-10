@@ -208,6 +208,40 @@ class generate():
         
         return 0
 
+    def unitTest():
+        # Create a random height map
+        dem = np.random.randn(config.arrayExtent, config.arrayExtent).astype(np.float32)
+        
+        # Create two soil types, split in the middle
+        soilType = np.array([[1,1,1,1,1,0,0,0,0,0],
+                             [1,1,1,1,1,0,0,0,0,0]], dtype= np.float32)
+        soilType = np.repeat(soilType, 5, axis=0)
+        
+        s, c = [0.01, 0.001]                           # Saturated hydraulic conductivity for sand and clay respectively.
+        Ks = np.array([[s,s,s,s,s,c,c,c,c,c],
+                       [s,s,s,s,s,c,c,c,c,c]], dtype= np.float32)
+        Ks = np.repeat(Ks, 5, axis=0)
+        
+        # Create precipitation
+        precipitation = np.full(config.arrayShape, fill_value=1, dtype=np.float32)
+        
+        # Create evaporation
+        evaporation = np.full(config.arrayShape, fill_value=0.25, dtype=np.float32)
+        
+        # Create land-use types
+        f, w, r, h = [1.2, 1, 0.02, 0.001]              # Land-use coefficients for field, water, road and houses.
+        landUseC = np.array([[f,f,f,w,f,r,r,f,h,h],
+                            [f,f,f,f,w,r,r,f,f,h],
+                            [f,f,f,f,w,r,r,f,f,f],
+                            [f,f,f,w,f,r,r,f,f,f],
+                            [f,f,w,f,f,r,r,f,h,h]], dtype=np.float32)
+        landUseC = np.repeat(landUseC, 2, axis=0)
+        
+        infiltration = Ks * landUseC
+        
+        return dem, precipitation, evaporation, infiltration
+        
+        
 
 # Initialize HPX runtime and run model, on the root locality -------------------
 # General configuration options, which are valid on all
@@ -234,3 +268,4 @@ if __name__ == "__main__":
     main = generate()
     #main.simulate()
     generate.boundaryCell()
+    generate.unitTest()
