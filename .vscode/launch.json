@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "args": ["--hpx:thread=4"],
+            "args": ["--hpx:thread=4", "--hpx:set_thread_stacksize(small_)"],
             "console": "integratedTerminal",
             "justMyCode": true
         }
