@@ -111,7 +111,7 @@ class generate():
         lRain = nr_raincells_nearby > 3
         
         random = max(0, np.random.randint(0, 20) - 10)
-        rain_value = lfr.uniform(generate.lue_zero(), np.float32, 0, 0.25)
+        rain_value = lfr.uniform(generate.lue_zero(), np.float32, 0, 0.15)
         
         rain = lfr.where(sRain, rain_value, 0)
         rain = lfr.where(mRain, rain_value*2, rain)

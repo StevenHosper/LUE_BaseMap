@@ -8,10 +8,10 @@ import lue.framework as lfr
 import configuration as config
 
 class update():
-    def runoff(precipitation, evaporation,\
-                    infiltration):
-        runoff = precipitation - evaporation - infiltration
-        return runoff
+    def surfaceWaterHeight(waterHeight, precipitation, evaporation,\
+                           infiltration):
+        waterHeight = waterHeight + precipitation - evaporation - infiltration
+        return waterHeight
     
     def groundWaterHeight(dem, Ks, waterHeight, groundWaterHeight,\
                           infiltration, percolation, zero):

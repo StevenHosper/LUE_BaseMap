@@ -6,8 +6,6 @@ Created on Wed Feb 15 2023
 """
 # The HydrologicBaseModel
 import lue.framework as lfr
-import lue.pcraster as lpr
-import numpy as np
 import math as math
 import os
 import datetime
@@ -52,8 +50,8 @@ class mainModel():
         
         # Set the waterheight so that it matches the elevation head
         # TO-DO: Initialize  waterheight for rivers and water bodies
-        self.waterheight = lfr.where(self.dem < initialWaterTable, initialWaterTable - self.dem, 0)
-        self.waterheight = lfr.where(landUse == 51, self.waterheight, 0 )
+        self.surfaceWaterHeight = lfr.where(self.dem < initialWaterTable, initialWaterTable - self.dem, 0)
+        self.surfaceWaterHeight = lfr.where(landUse == 51, self.surfaceWaterHeight, 0 )
         
         # Create a groundwater table 
         # TO-DO : In the future we would preferable read the groundwater table from measuring stations \
@@ -62,7 +60,7 @@ class mainModel():
         self.groundWaterHeight = lfr.where(landUse == 51, self.dem, self.groundWaterHeight)
         self.groundWaterHeight = lfr.where(dG.generate.boundaryCell(), self.dem, self.groundWaterHeight)
         
-        lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/initial_water_height.tiff')
+        lfr.to_gdal(self.surfaceWaterHeight, config.path + f'/output/{config.scenario}/initial_water_height.tiff')
 
         # Access the data from the directory or the API dependend on the settings
         precipitation     = dA.get.precipitation(current_date, dA.get.apiSession())
@@ -72,36 +70,38 @@ class mainModel():
         i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration)
         
         # Add precipitation to the watertable
-        self.waterheight = self.waterheight + precipitation
+        self.surfaceWaterHeight = self.surfaceWaterHeight + precipitation
 
         # Check if the waterheight is more than the evaporation and infiltration combined
         ie = pot_evaporation + pot_infiltration
         
         # Calculate the actual evaporation and infiltration
-        evaporation  = lfr.where(self.waterheight >= ie, pot_evaporation, self.waterheight*e_ratio)
-        infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
+        evaporation  = lfr.where(self.surfaceWaterHeight >= ie, pot_evaporation, self.surfaceWaterHeight*e_ratio)
+        infiltration = lfr.where(self.surfaceWaterHeight >= ie, pot_infiltration, self.surfaceWaterHeight*i_ratio)
         
         
         # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
         # *Note --> the rain now happens 'first', depending on when the rain falls during the day there might not be time to evaporate, but this is currently not taken into account.
-        self.waterheight = self.waterheight - evaporation - infiltration
+        self.surfaceWaterHeight = self.surfaceWaterHeight - evaporation - infiltration
         self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
         
         # Make sure the waterheight is not below zero as this is not possible.
         # There can be no evaporation without water.
-        self.waterheight = lfr.where(self.waterheight < dG.generate.lue_zero(), dG.generate.lue_zero(), self.waterheight)
-        self.height = self.waterheight + self.dem
+        self.surfaceWaterHeight = lfr.where(self.surfaceWaterHeight < dG.generate.lue_zero(), dG.generate.lue_zero(), self.surfaceWaterHeight)
+        self.height = self.surfaceWaterHeight + self.dem
         
         # Create file with current situation of the water balance
-        variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight}
+        variables = {"surfacewater": self.surfaceWaterHeight, "groundwater": self.groundWaterHeight}
         reporting.report.static(current_date, variables, config.output_path)
         return 0
     
     
 
     def iterate(self, start_date: datetime.date, end_date: datetime.date, Ks, landC):
-        for i in range(int((end_date - start_date).days * 300)):
+        timesteps = 300                                                                 # At this point we are splitting a day within 300 steps, aiming to go to seconds base.
+        for i in range(int((end_date - start_date).days * timesteps)):
             current_date = start_date + datetime.timedelta(seconds=1+i)
+            print(f'Timestep: {i}')
             # Recalculate if the water should still flow in the same direction
             ldd = lfr.d8_flow_direction(self.height)
             
@@ -114,44 +114,44 @@ class mainModel():
 
             
             # Add precipitation to the watertable
-            self.waterheight = self.waterheight + precipitation
+            self.surfaceWaterHeight = self.surfaceWaterHeight + precipitation
             
             # Check if the waterheight is more than the evaporation and infiltration combined
             ie = pot_evaporation + pot_infiltration
             
             # Calculate the actual evaporation and infiltration
-            evaporation  = lfr.where(self.waterheight >= ie, pot_evaporation, self.waterheight*e_ratio)
-            infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
+            evaporation  = lfr.where(self.surfaceWaterHeight >= ie, pot_evaporation, self.surfaceWaterHeight*e_ratio)
+            infiltration = lfr.where(self.surfaceWaterHeight >= ie, pot_infiltration, self.surfaceWaterHeight*i_ratio)
             
             # Check the difference in dem (as this determines the total height that should be filled to create an equal surface)
             height_difference = self.height - lfr.downstream(ldd, self.height)
-            potential_flux = lfr.where(height_difference > self.waterheight, 0.5*self.waterheight, 0.5*height_difference)
+            potential_flux = lfr.where(height_difference > self.surfaceWaterHeight, 0.5*self.surfaceWaterHeight, 0.5*height_difference)
             flux = lfr.where(ldd != 5, potential_flux, 0)
             
             # ROUTING
-            self.waterheight = lfr.where(dG.generate.boundaryCell(), self.waterheight + lfr.upstream(ldd, flux) - flux, self.waterheight)
+            self.surfaceWaterHeight = lfr.where(dG.generate.boundaryCell(), self.surfaceWaterHeight + lfr.upstream(ldd, flux) - flux, self.surfaceWaterHeight)
             
             self.groundWaterHeight = lfr.where(dG.generate.boundaryCell(), update.update.groundWaterHeight(
-                self.dem, Ks, self.waterheight, self.groundWaterHeight, infiltration, \
+                self.dem, Ks, self.surfaceWaterHeight, self.groundWaterHeight, infiltration, \
                 percolation, dG.generate.lue_zero()
                 ), self.groundWaterHeight)
 
             # Remove the evaporation and infiltration from the waterheight as it is lost to the 
             # atmosphere or groundwater.
-            self.waterheight = self.waterheight - evaporation - infiltration
+            self.surfaceWaterHeight = self.surfaceWaterHeight - evaporation - infiltration
             self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
             
             
             # Waterheight can never be lower than zero.
-            self.waterheight = lfr.where(self.waterheight < dG.generate.lue_zero(), dG.generate.lue_zero(), self.waterheight)
+            self.surfaceWaterHeight = lfr.where(self.surfaceWaterHeight < dG.generate.lue_zero(), dG.generate.lue_zero(), self.surfaceWaterHeight)
             
             # Adjust the concurrent height
-            self.height = self.dem + self.waterheight
+            self.height = self.dem + self.surfaceWaterHeight
             if config.v2: second = i;
             else: second = 1;
             
             # Create file with current situation of the water balance
-            variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight}
+            variables = {"surfacewater": self.surfaceWaterHeight, "groundwater": self.groundWaterHeight}
             fluxes    = {}
             reporting.report.dynamic(current_date, second, variables, fluxes, config.output_path)
         return 0
@@ -164,24 +164,12 @@ class mainModel():
         landUse  = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)
         soilType = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)
 
-        # Attempt with pcraster to make ldd
-        pcr.setclone(config.arrayExtent, config.arrayExtent, config.resolution, 0, 0)
-        pcr.setglobaloption("lddin")
-        ds = gdal.Open(config.path + f'/data/{config.scenario}/dem.tiff')
-        raster = ds.GetRasterBand(1)
-        a = raster.ReadAsArray()
-        result = pcr.numpy2pcr(pcr.Scalar, a, 999)
-        ldd = pcr.lddcreate(result, 9999999, 500, 9999999, 9999999)
-        pcr.report(ldd, config.path + f'/output/{config.scenario}/ldd_pcr.tiff')
-        
-        self.ldd = lfr.from_gdal(config.path + f'/output/{config.scenario}/ldd_pcr.tiff', config.partitionShape)
-
         # Create the hydraulic conductivity variable
-        Ks       = dA.get.Ks(soilType, dG.generate.lue_one())
+        Ks       = dA.get.Ks(soilType)
         lfr.to_gdal(Ks, config.path + f'/output/{config.scenario}/Ks.tiff')
         
         # Create the land-use coefficient variable
-        landC   = dA.get.landC(landUse, dG.generate.lue_one())
+        landC   = dA.get.landC(landUse)
         lfr.to_gdal(landC, config.path + f'/output/{config.scenario}/landUse_coefficients.tiff')
         
         # Initialize the static

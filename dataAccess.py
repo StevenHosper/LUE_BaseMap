@@ -99,9 +99,9 @@ class get():
         data = lfr.from_gdal(variable_path, configuration.partitionShape)
         return data
     
-    def Ks(soilType, dummy):
+    def Ks(soilType):
         # Assign K for de Wupsel
-        Ks = dummy * 0.05
+        Ks = gen.lue_one() * 0.05
         for i in range(20):
             if i == 2:
                 Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
@@ -125,9 +125,9 @@ class get():
                 Ks = lfr.where(soilType == i, 3.0*10**-2, Ks)           # Hydraulic conductivity in m/day
         return Ks
     
-    def landC(landUse, dummy):
+    def landC(landUse):
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
-        land_c = dummy
+        land_c = gen.lue_one()
         for i in range(255):
             if i in configuration.concrete:
                 land_c = lfr.where(landUse == i, 0.001, land_c)
@@ -157,7 +157,7 @@ class get():
         if config.v2:
             random = np.random.randint(0, 300)
             if random <= 15:
-                precipitation = gen.lue_one()*0.5
+                precipitation = gen.lue_one()*0.2
                 kernel = np.array(
                 [
                     [1,1,1],
