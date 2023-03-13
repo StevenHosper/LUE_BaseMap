@@ -15,7 +15,8 @@ import configuration as config
 def slice_pathname(pathname, idx):
     date = datetime.date(year = 2023, month = 2, day = 23)
     print(date + datetime.timedelta(idx))
-    return "{}_{}.tiff".format(pathname, date + datetime.timedelta(idx))
+    date = date + datetime.timedelta(idx)
+    return "{}_{}.tiff".format(pathname, date)
 
 
 def read_raster(raster_pathname, idx):
@@ -77,7 +78,7 @@ def main():
     
     assert not os.path.splitext(raster_pathname)[1]
 
-    nr_rasters = 30
+    nr_rasters = 60
     assert nr_rasters >= 0
     
     create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 1)
@@ -93,7 +94,7 @@ def main():
     
     assert not os.path.splitext(raster_pathname)[1]
 
-    nr_rasters = 30
+    nr_rasters = 60
     assert nr_rasters >= 0
 
     create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 1)

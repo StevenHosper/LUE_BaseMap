@@ -111,10 +111,8 @@ class mainModel():
 
     def iterate(self, start_date: datetime.date, end_date: datetime.date, Ks, landC):
         for i in range(int((end_date - start_date).days)):
-            # Print the time to keep track while the program runs
-            print(f'The date is: {start_date + datetime.timedelta(1+i)}')
-            current_date = start_date + datetime.timedelta(1+i)
-            
+            current_date = start_date + datetime.timedelta(days=1+i)
+            print(i)
             # Recalculate if the water should still flow in the same direction
             ldd = lfr.d8_flow_direction(self.height)
             

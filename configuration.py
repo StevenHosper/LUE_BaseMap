@@ -14,7 +14,9 @@ useAPI       = False                                                    # use AP
 generateData = True                                                    # generate new data to be used
 scenario     = "generated"                                            # scenarios : ["generated", "De Wupsel", "De Tol", "De Wupsel10", "unitTest"]
 startDate    = datetime.date(year = 2023, month = 2, day = 23)
-endDate      = datetime.date(year = 2023, month = 3, day = 25)
+endDate      = datetime.date(year = 2023, month = 4, day = 25)
+v2 = False
+unitTest = False
 
 
 ### API SETTINGS ###
@@ -33,7 +35,7 @@ demAPI    = "a60ad336-c95b-4fb6-b852-96fc352ee808"
 includePrecipitation = True
 includeEvaporation   = True
 includeInfiltration  = True
-includePercolation   = False
+includePercolation   = True
 includeGroundFlow    = False                                              # Currently not working
 
 # Report

@@ -12,6 +12,7 @@ import datetime
 import uuid as uid
 from osgeo import gdal
 import configuration as config
+from dataGen import generate as gen
 import requests
 from pcraster import aguila
 
@@ -152,25 +153,48 @@ class get():
         # is multiplied with a coefficient based on land-use
         return Ks * landC
     
-    def precipitation(date, session, zero):
-        if configuration.includePrecipitation:
-            if configuration.useAPI:
-                precipitation  = get.apiTemporal(date, 'precipitation', session)
+    def precipitation(date, session):
+        if config.v2:
+            random = np.random.randint(0, 300)
+            if random <= 15:
+                precipitation = gen.lue_one()*0.5
+                kernel = np.array(
+                [
+                    [1,1,1],
+                    [1,1,1],
+                    [1,1,1],
+                ],
+                dtype=np.uint8,
+                )
+                fraction_raincells = 0.05                                           # Determine the percentage of raincells in the array
+                raincells = lfr.uniform(gen.lue_zero(), np.float32, 0, 1) <= fraction_raincells
+                rainValue = lfr.focal_sum(raincells, kernel)
+                for i in range(10):
+                    precipitation = lfr.where(rainValue == i, precipitation * i, precipitation)
+                
             else:
-                precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
+                precipitation = gen.lue_zero()
         else:
-            precipitation = zero
+            if configuration.includePrecipitation:
+                if configuration.useAPI:
+                    precipitation  = get.apiTemporal(date, 'precipitation', session)
+                else:
+                    precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
+            else:
+                precipitation = gen.lue_zero()
         return precipitation
     
-    def pot_evaporation(date, session, zero):
-        # Evaporation
-        if configuration.includeEvaporation:
-            if configuration.useAPI:
-                pot_evaporation   = get.apiTemporal(date, 'pot_evaporation', session)
-            else:
-                pot_evaporation   = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'potential_evaporation')
+    def pot_evaporation(date, session):
+        if config.v2:
+            pot_evaporation = gen.lue_one() * 0.001
         else:
-            pot_evaporation = zero
+            if configuration.includeEvaporation:
+                if configuration.useAPI:
+                    pot_evaporation   = get.apiTemporal(date, 'pot_evaporation', session)
+                else:
+                    pot_evaporation   = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'potential_evaporation')
+            else:
+                pot_evaporation = gen.lue_zero()
         return pot_evaporation
     
     def infiltration(dem, groundWaterHeight, Ks, land_c, zero):

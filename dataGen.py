@@ -111,7 +111,7 @@ class generate():
         lRain = nr_raincells_nearby > 3
         
         random = max(0, np.random.randint(0, 20) - 10)
-        rain_value = lfr.uniform(generate.lue_zero(), np.float32, 0, 0.15)
+        rain_value = lfr.uniform(generate.lue_zero(), np.float32, 0, 0.25)
         
         rain = lfr.where(sRain, rain_value, 0)
         rain = lfr.where(mRain, rain_value*2, rain)
@@ -240,9 +240,9 @@ class generate():
         infiltration = Ks * landUseC
         
         # Report all important variables for use in the model
-        precipitation_lue = lfr.from_numpy(precipitation)
-        evaporation_lue   = lfr.from_numpy(evaporation)
-        infiltration_lue  = lfr.from_numpy(infiltration)
+        precipitation_lue = lfr.from_numpy(precipitation, config.partitionShape)
+        evaporation_lue   = lfr.from_numpy(evaporation, config.partitionShape)
+        infiltration_lue  = lfr.from_numpy(infiltration, config.partitionShape)
         
         return 0
         
@@ -271,6 +271,7 @@ lfr.start_hpx_runtime(cfg)
 # root locality unless you know what you are doing.
 if __name__ == "__main__":
     main = generate()
-    #main.simulate()
-    generate.boundaryCell()
-    generate.unitTest()
+    main.simulate()
+    # generate.boundaryCell()
+    if config.unitTest == True:
+        generate.unitTest()
