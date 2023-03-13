@@ -157,7 +157,7 @@ class get():
         if config.v2:
             random = np.random.randint(0, 300)
             if random <= 15:
-                precipitation = gen.lue_one()*0.2
+                precipitation = gen.lue_one()*0.05
                 kernel = np.array(
                 [
                     [1,1,1],
@@ -186,7 +186,7 @@ class get():
     
     def pot_evaporation(date, session):
         if config.v2:
-            pot_evaporation = gen.lue_one() * 0.001
+            pot_evaporation = gen.lue_one() * 0.0002
         else:
             if configuration.includeEvaporation:
                 if configuration.useAPI:
@@ -199,7 +199,7 @@ class get():
     
     def infiltration(dem, groundWaterHeight, Ks, land_c):
         if configuration.includeInfiltration:
-            pot_infiltration = get.calculate_infiltration(Ks, land_c)
+            pot_infiltration = get.calculate_infiltration(Ks, land_c) / 100
             pot_infiltration = lfr.where((dem - groundWaterHeight) < pot_infiltration, \
                                           dem - groundWaterHeight, pot_infiltration)
         else:
@@ -212,7 +212,7 @@ class get():
             part = lfr.where(part <= 0, gen.lue_zero(), part)
             percolation = lfr.where(dem < 0, gen.lue_zero(), \
                                     Ks * part)                                                # If the dem is negative, there is no percolation
-            percolation = lfr.where(percolation < 0, gen.lue_zero(), percolation)                            # If the percolation is negative, there is no percolation
+            percolation = lfr.where(percolation < 0, gen.lue_zero(), percolation) / 100                       # If the percolation is negative, there is no percolation
         else:
             percolation = gen.lue_zero()
             part = gen.lue_zero()

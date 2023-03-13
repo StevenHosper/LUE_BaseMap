@@ -98,7 +98,7 @@ class mainModel():
     
 
     def iterate(self, start_date: datetime.date, end_date: datetime.date, Ks, landC):
-        timesteps = 300                                                                 # At this point we are splitting a day within 300 steps, aiming to go to seconds base.
+        timesteps = 1200                                                                 # At this point we are splitting a day within 300 steps, aiming to go to seconds base.
         for i in range(int((end_date - start_date).days * timesteps)):
             current_date = start_date + datetime.timedelta(seconds=1+i)
             print(f'Timestep: {i}')
