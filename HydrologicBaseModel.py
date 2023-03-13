@@ -65,11 +65,11 @@ class mainModel():
         lfr.to_gdal(self.waterheight, config.path + f'/output/{config.scenario}/initial_water_height.tiff')
 
         # Access the data from the directory or the API dependend on the settings
-        precipitation     = dA.get.precipitation(current_date, dA.get.apiSession(), dG.generate.lue_zero())
-        pot_evaporation   = dA.get.pot_evaporation(current_date, dA.get.apiSession(), dG.generate.lue_zero())   
-        pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, dG.generate.lue_zero())
-        percolation, part = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
-        i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration, dG.generate.lue_one(), dG.generate.lue_zero())
+        precipitation     = dA.get.precipitation(current_date, dA.get.apiSession())
+        pot_evaporation   = dA.get.pot_evaporation(current_date, dA.get.apiSession())   
+        pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC)
+        percolation       = dA.get.percolation(self.dem, self.groundWaterHeight, Ks)
+        i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration)
         
         # Add precipitation to the watertable
         self.waterheight = self.waterheight + precipitation
@@ -80,16 +80,6 @@ class mainModel():
         # Calculate the actual evaporation and infiltration
         evaporation  = lfr.where(self.waterheight >= ie, pot_evaporation, self.waterheight*e_ratio)
         infiltration = lfr.where(self.waterheight >= ie, pot_infiltration, self.waterheight*i_ratio)
-        
-        
-        ###### TEST FUNCTIONS, NOT WORKING PROPERLY YET ######
-        
-        runoff = update.update.runoff(precipitation, evaporation, infiltration)
-        runoff = lfr.where(runoff >= 0, runoff, 0.0001)
-        self.ldd = lfr.where(runoff >= -100, self.ldd, 5)
-        discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 8000, dG.generate.lue_one())
-        
-        ######################################################
         
         
         # Remove the evaporation and infiltration from the waterheight as it is lost to the atmosphere or groundwater.
@@ -103,27 +93,25 @@ class mainModel():
         self.height = self.waterheight + self.dem
         
         # Create file with current situation of the water balance
-        variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight, "runoff": runoff, "discharge": discharge}
+        variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight}
         reporting.report.static(current_date, variables, config.output_path)
         return 0
     
     
 
     def iterate(self, start_date: datetime.date, end_date: datetime.date, Ks, landC):
-        for i in range(int((end_date - start_date).days)):
-            current_date = start_date + datetime.timedelta(days=1+i)
-            print(i)
+        for i in range(int((end_date - start_date).days * 300)):
+            current_date = start_date + datetime.timedelta(seconds=1+i)
             # Recalculate if the water should still flow in the same direction
             ldd = lfr.d8_flow_direction(self.height)
             
             # Access the data from the directory or the API dependend on the settings
-            precipitation     = dA.get.precipitation(current_date, dA.get.apiSession(), dG.generate.lue_zero())
-            pot_evaporation   = dA.get.pot_evaporation(current_date, dA.get.apiSession(), dG.generate.lue_zero())
-            pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC, dG.generate.lue_zero())
-            percolation, part = dA.get.percolation(self.dem, self.groundWaterHeight, Ks, dG.generate.lue_zero())
-            i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration, dG.generate.lue_one(), dG.generate.lue_zero())
+            precipitation     = dA.get.precipitation(current_date, dA.get.apiSession())
+            pot_evaporation   = dA.get.pot_evaporation(current_date, dA.get.apiSession())
+            pot_infiltration  = dA.get.infiltration(self.dem, self.groundWaterHeight, Ks, landC)
+            percolation       = dA.get.percolation(self.dem, self.groundWaterHeight, Ks)
+            i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration)
 
-            lfr.to_gdal(part, config.path + f'/output/{config.scenario}/percolation_{current_date}.tiff')
             
             # Add precipitation to the watertable
             self.waterheight = self.waterheight + precipitation
@@ -154,25 +142,18 @@ class mainModel():
             self.groundWaterHeight = self.groundWaterHeight + infiltration - percolation
             
             
-            ####### TEST FUNCTIONS, NOT WORKING PROPERLY YET ######
-            
-            runoff = update.update.runoff(precipitation, evaporation, infiltration)
-            runoff = lfr.where(runoff >= 0, runoff, 0.0001)
-            discharge = lfr.kinematic_wave(self.ldd, runoff, dG.generate.lue_one()*0.0001, 1.5, 0.6, 8000, dG.generate.lue_one())
-            
-            #######################################################
-            
-            
             # Waterheight can never be lower than zero.
             self.waterheight = lfr.where(self.waterheight < dG.generate.lue_zero(), dG.generate.lue_zero(), self.waterheight)
             
             # Adjust the concurrent height
             self.height = self.dem + self.waterheight
+            if config.v2: second = i;
+            else: second = 1;
             
             # Create file with current situation of the water balance
-            variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight, "runoff": runoff, "discharge": discharge}
+            variables = {"waterheight": self.waterheight, "groundwater": self.groundWaterHeight}
             fluxes    = {}
-            reporting.report.dynamic(current_date, variables, fluxes, config.output_path)
+            reporting.report.dynamic(current_date, second, variables, fluxes, config.output_path)
         return 0
      
      

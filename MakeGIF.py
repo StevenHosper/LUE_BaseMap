@@ -14,8 +14,12 @@ import configuration as config
 
 def slice_pathname(pathname, idx):
     date = datetime.date(year = 2023, month = 2, day = 23)
-    print(date + datetime.timedelta(idx))
-    date = date + datetime.timedelta(idx)
+    if config.v2:
+        second = (idx) * config.dt 
+        date = f'{date + datetime.timedelta(seconds=idx)}_{second}'
+        print(date)
+    else:
+        date = date + datetime.timedelta(idx)
     return "{}_{}.tiff".format(pathname, date)
 
 
@@ -68,7 +72,7 @@ def main():
     
     # Implemenet directories for both work and home adress.
     at_work = False
-    variable = 'runoff'
+    variable = 'groundwater'
     if at_work:
         raster_pathname = f'{root_path}/output/{config.scenario}/{variable}'
         animation_pathname = f'{root_path}/output/{config.scenario}/{variable}.gif'
@@ -78,7 +82,7 @@ def main():
     
     assert not os.path.splitext(raster_pathname)[1]
 
-    nr_rasters = 60
+    nr_rasters = 29
     assert nr_rasters >= 0
     
     create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 1)
@@ -94,7 +98,7 @@ def main():
     
     assert not os.path.splitext(raster_pathname)[1]
 
-    nr_rasters = 60
+    nr_rasters = 29
     assert nr_rasters >= 0
 
     create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 1)

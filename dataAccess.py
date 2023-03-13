@@ -197,40 +197,40 @@ class get():
                 pot_evaporation = gen.lue_zero()
         return pot_evaporation
     
-    def infiltration(dem, groundWaterHeight, Ks, land_c, zero):
+    def infiltration(dem, groundWaterHeight, Ks, land_c):
         if configuration.includeInfiltration:
             pot_infiltration = get.calculate_infiltration(Ks, land_c)
             pot_infiltration = lfr.where((dem - groundWaterHeight) < pot_infiltration, \
                                           dem - groundWaterHeight, pot_infiltration)
         else:
-            pot_infiltration = zero
+            pot_infiltration = gen.lue_zero()
         return pot_infiltration
     
-    def percolation(dem, groundWaterHeight, Ks, zero):
+    def percolation(dem, groundWaterHeight, Ks):
         if configuration.includePercolation:
             part = (groundWaterHeight - 0.9*dem)/dem
-            part = lfr.where(part <= 0, zero, part)
-            percolation = lfr.where(dem < 0, zero, \
+            part = lfr.where(part <= 0, gen.lue_zero(), part)
+            percolation = lfr.where(dem < 0, gen.lue_zero(), \
                                     Ks * part)                                                # If the dem is negative, there is no percolation
-            percolation = lfr.where(percolation < 0, zero, percolation)                            # If the percolation is negative, there is no percolation
+            percolation = lfr.where(percolation < 0, gen.lue_zero(), percolation)                            # If the percolation is negative, there is no percolation
         else:
-            percolation = zero
-            part = zero
-        return percolation, part
+            percolation = gen.lue_zero()
+            part = gen.lue_zero()
+        return percolation
     
-    def ieRatio(pot_evaporation, pot_infiltration, ones, zero):
+    def ieRatio(pot_evaporation, pot_infiltration):
         if configuration.includeEvaporation and configuration.includeInfiltration:
             i_ratio = pot_infiltration / (pot_evaporation + pot_infiltration)
             e_ratio = pot_evaporation / (pot_evaporation + pot_infiltration)
         elif configuration.includeEvaporation:
-            i_ratio = zero
-            e_ratio = ones
+            i_ratio = gen.lue_zero()
+            e_ratio = gen.lue_one()
         elif configuration.includeInfiltration:
-            i_ratio = ones
-            e_ratio = zero
+            i_ratio = gen.lue_one()
+            e_ratio = gen.lue_zero()
         else:
-            i_ratio = zero
-            e_ratio = zero
+            i_ratio = gen.lue_zero()
+            e_ratio = gen.lue_zero()
         return i_ratio, e_ratio
     
     def groundFlow():
