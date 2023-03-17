@@ -152,7 +152,8 @@ class mainModel():
             variables = {"surfacewater": surfaceWaterHeight, "groundwater": groundWaterHeight}
             fluxes    = {}
             reporting.report.dynamic(current_date, second, variables, fluxes, config.output_path)
-            lfr.maximum(flux).get()
+            if i % 30 == 0:
+                lfr.maximum(flux).get()
         return 0
      
      

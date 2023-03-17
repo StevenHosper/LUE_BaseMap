@@ -82,7 +82,7 @@ def main():
     
     assert not os.path.splitext(raster_pathname)[1]
 
-    nr_rasters = 115
+    nr_rasters = 119
     assert nr_rasters >= 0
     
     create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 10)
@@ -98,7 +98,7 @@ def main():
     
     assert not os.path.splitext(raster_pathname)[1]
 
-    nr_rasters = 115
+    nr_rasters = 119
     assert nr_rasters >= 0
 
     create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 2)
