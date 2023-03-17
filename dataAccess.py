@@ -123,7 +123,7 @@ class get():
                 Ks = lfr.where(soilType == i, 4.0*10**-2, Ks)           # Hydraulic conductivity in m/day
             if i == 19:
                 Ks = lfr.where(soilType == i, 3.0*10**-2, Ks)           # Hydraulic conductivity in m/day
-        return Ks
+        return Ks / 86400 # to m/s
     
     def landC(landUse):
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
@@ -156,7 +156,7 @@ class get():
     def precipitation(date, session):
         if config.v2:
             random = np.random.randint(0, 300)
-            if random <= 15:
+            if random <= 150:
                 precipitation = gen.lue_one()*0.05
                 kernel = np.array(
                 [
@@ -166,11 +166,11 @@ class get():
                 ],
                 dtype=np.uint8,
                 )
-                fraction_raincells = 0.05                                           # Determine the percentage of raincells in the array
+                fraction_raincells = 0.1                                           # Determine the percentage of raincells in the array
                 raincells = lfr.uniform(gen.lue_zero(), np.float32, 0, 1) <= fraction_raincells
                 rainValue = lfr.focal_sum(raincells, kernel)
                 for i in range(10):
-                    precipitation = lfr.where(rainValue == i, precipitation * i, precipitation)
+                    precipitation = lfr.where(rainValue == i, precipitation * i, precipitation) / 3600
                 
             else:
                 precipitation = gen.lue_zero()
@@ -186,7 +186,7 @@ class get():
     
     def pot_evaporation(date, session):
         if config.v2:
-            pot_evaporation = gen.lue_one() * 0.0002
+            pot_evaporation = gen.lue_one() * 0.00002
         else:
             if configuration.includeEvaporation:
                 if configuration.useAPI:
@@ -208,7 +208,7 @@ class get():
     
     def percolation(dem, groundWaterHeight, Ks):
         if configuration.includePercolation:
-            part = (groundWaterHeight - 0.75*dem)/dem
+            part = groundWaterHeight/dem
             part = lfr.where(part <= 0, gen.lue_zero(), part)
             percolation = lfr.where(dem < 0, gen.lue_zero(), \
                                     Ks * part)                                                # If the dem is negative, there is no percolation
