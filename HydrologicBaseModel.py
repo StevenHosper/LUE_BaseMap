@@ -51,7 +51,7 @@ class mainModel():
         # Set the waterheight so that it matches the elevation head
         # TO-DO: Initialize  waterheight for rivers and water bodies
         iniSurfaceWaterHeight = lfr.where(self.dem < initialWaterTable, initialWaterTable - self.dem, 0)
-        iniSurfaceWaterHeight = lfr.where(landUse == 51, iniSurfaceWaterHeight, 0 )
+        # iniSurfaceWaterHeight = lfr.where(landUse == 51, iniSurfaceWaterHeight, 0 )
         
         # Create a groundwater table 
         # TO-DO : In the future we would preferable read the groundwater table from measuring stations \
@@ -99,7 +99,7 @@ class mainModel():
 
     def iterate(self, start_date: datetime.date, end_date: datetime.date, \
                 iniSurfaceWaterHeight, iniGroundWaterHeight, Ks, landC):        # At this point we are splitting a day within 300 steps, aiming to go to seconds base.
-        seconds = 3600
+        seconds = 1800
         surfaceWaterHeight = iniSurfaceWaterHeight
         groundWaterHeight = iniGroundWaterHeight
         for i in range(int((end_date - start_date).days * seconds)):
@@ -133,11 +133,6 @@ class mainModel():
             
             # ROUTING
             surfaceWaterHeight = lfr.where(dG.generate.boundaryCell(), surfaceWaterHeight + lfr.upstream(ldd, flux) - flux, surfaceWaterHeight)
-            
-            groundWaterHeight = lfr.where(dG.generate.boundaryCell(), update.update.groundWaterHeight(
-                self.dem, Ks, surfaceWaterHeight, groundWaterHeight, infiltration, \
-                percolation, dG.generate.lue_zero()
-                ), groundWaterHeight)
 
             # Remove the evaporation and infiltration from the waterheight as it is lost to the 
             # atmosphere or groundwater.
