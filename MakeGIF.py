@@ -29,7 +29,7 @@ def read_raster(raster_pathname, idx):
 
 
 def create_animation(raster_pathname, nr_rasters, animation_pathname, vmin, vmax):
-    with iio.get_writer(animation_pathname, mode="i", fps=1) as writer:
+    with iio.get_writer(animation_pathname, mode="i", fps=3) as writer:
         for i in range(nr_rasters + 1):
             figure, axis = plt.subplots(figsize=(5, 5))
             axis.set_axis_off()
@@ -82,7 +82,7 @@ def main():
     
     assert not os.path.splitext(raster_pathname)[1]
 
-    nr_rasters = 39
+    nr_rasters = 55
     assert nr_rasters >= 0
     
     create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 10)
@@ -98,10 +98,10 @@ def main():
     
     assert not os.path.splitext(raster_pathname)[1]
 
-    nr_rasters = 39
+    nr_rasters = 55
     assert nr_rasters >= 0
 
-    create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 3)
+    create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 4)
 
 
 if __name__ == "__main__":

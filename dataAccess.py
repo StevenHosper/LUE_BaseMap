@@ -208,7 +208,7 @@ class get():
     
     def percolation(dem, groundWaterHeight, Ks):
         if configuration.includePercolation:
-            part = (groundWaterHeight - 0.9*dem)/dem
+            part = (groundWaterHeight - 0.75*dem)/dem
             part = lfr.where(part <= 0, gen.lue_zero(), part)
             percolation = lfr.where(dem < 0, gen.lue_zero(), \
                                     Ks * part)                                                # If the dem is negative, there is no percolation

@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "args": ["--hpx:thread=4","--hpx:numa-sensitive", "--hpx:debug-hpx-log"],
+            "args": ["--hpx:thread=4"],
             "console": "integratedTerminal",
             "justMyCode": true
         }
