@@ -182,7 +182,7 @@ class get():
                     precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
             else:
                 precipitation = gen.lue_zero()
-        return precipitation * (25/3600)
+        return precipitation
     
     def pot_evaporation(date, session):
         if config.v2:
@@ -205,6 +205,16 @@ class get():
         else:
             pot_infiltration = gen.lue_zero()
         return pot_infiltration
+    
+    def EvaporationInfiltration(surfaceWaterHeight, pot_evaporation, pot_infiltration, e_ratio, i_ratio):
+         # Check if the waterheight is more than the evaporation and infiltration combined
+        ie = pot_evaporation + pot_infiltration
+        
+        # Calculate the actual evaporation and infiltration
+        evaporation  = lfr.where(surfaceWaterHeight >= ie, pot_evaporation, surfaceWaterHeight*e_ratio)
+        infiltration = lfr.where(surfaceWaterHeight >= ie, pot_infiltration, surfaceWaterHeight*i_ratio)
+        
+        return evaporation, infiltration
     
     def percolation(dem, groundWaterHeight, Ks):
         if configuration.includePercolation:

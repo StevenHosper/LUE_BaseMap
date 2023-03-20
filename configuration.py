@@ -11,10 +11,11 @@ import os
 ### GENERAL SETTINGS ###
 network      = False                                                    # use network disk of NS [True] or local disk [False]
 useAPI       = False                                                    # use API functionality to access data
-scenario     = "De Wupsel"                                            # scenarios : ["generated", "De Wupsel", "De Tol", "De Wupsel10", "unitTest"]
+scenario     = "De Wupsel"                                              # scenarios : ["generated", "De Wupsel", "De Tol", "De Wupsel10", "unitTest"]
 startDate    = datetime.date(year = 2023, month = 2, day = 23)
 endDate      = datetime.date(year = 2023, month = 2, day = 24)
-dt           = 15                                                       # The time difference between reported data in seconds (for v2)
+dt           = 300                                                      # The time difference between reported data in seconds (for v2)
+dT           = 6                                                        # The times new data will be loaded in.
 v2 = True
 unitTest = False
 
@@ -44,6 +45,7 @@ fluxes    = []
 
 # Set values
 initialWaterTable = 1.30
+waterBelowDEM     = 0.10
 
 if scenario == "De Wupsel" or scenario == "De Tol":
     arrayExtent     = 5000

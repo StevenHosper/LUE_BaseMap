@@ -82,10 +82,10 @@ def main():
     
     assert not os.path.splitext(raster_pathname)[1]
 
-    nr_rasters = 119
+    nr_rasters = 14
     assert nr_rasters >= 0
     
-    create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 10)
+    create_animation(raster_pathname, nr_rasters, animation_pathname, 10, 40)
     
     # Second animation
     variable = 'surfacewater'
@@ -98,10 +98,10 @@ def main():
     
     assert not os.path.splitext(raster_pathname)[1]
 
-    nr_rasters = 119
+    nr_rasters = 14
     assert nr_rasters >= 0
 
-    create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 2)
+    create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 1)
 
 
 if __name__ == "__main__":

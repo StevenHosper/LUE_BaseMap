@@ -9,6 +9,12 @@ import configuration as config
 
 # Reporting for the HydrologicBaseModel
 class report():
+    def v2(date, time, variables, output_path):
+        for variable, data in variables.items():
+            lfr.to_gdal(data, output_path + f'{variable}_{date}_{time}.tiff')
+        return 0
+    
+    
     def static(date, variables, output_path):
         for variable, data in variables.items():
             lfr.to_gdal(data, output_path + f'{variable}_{date}.tiff')
