@@ -160,7 +160,7 @@ class get():
     def precipitation(date, session):
         if config.v2:
             random = np.random.randint(0, config.dT)
-            if random <= config.dT/2:
+            if random <= config.dT:
                 precipitation = gen.lue_one()*0.05
                 kernel = np.array(
                 [
@@ -186,7 +186,7 @@ class get():
                     precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
             else:
                 precipitation = gen.lue_zero()
-        return precipitation * np.random.randint(1,25) / 1000
+        return precipitation * np.random.randint(15,35) / 1000
     
     def pot_evaporation(date, session):
         if config.v2:

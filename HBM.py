@@ -11,9 +11,6 @@ import os
 import datetime
 import sys
 import time
-import pcraster as pcr
-from osgeo import gdal
-import numpy as np
 
 # Own functions
 # TO-DO: Reformat by the use of: from ... import ... as ...
@@ -21,7 +18,6 @@ import configuration as config
 import dataAccess as dA
 import MakeGIF
 import reporting
-import update
 import dataGen as dG
 
 # Timer to add some measure of functionality to the program
@@ -57,7 +53,7 @@ class mainModel():
             self.iniGroundWaterHeight = lfr.where(landUse == i, self.dem, self.iniGroundWaterHeight)
         
         # Reporting
-        variables       = {"iniSurfaceWaterHeight": self.iniSurfaceWaterHeight, "iniGroundWaterHeight": self.iniGroundWaterHeight}
+        variables       = {"iniSurfaceWaterHeight": self.iniSurfaceWaterHeight}
         reporting.report.v2(config.startDate, 0, variables, config.output_path)
 
     
@@ -77,11 +73,15 @@ class mainModel():
             # Load data
             precipitation     = dA.get.precipitation(currentDate, dA.get.apiSession()) / 3600       # Divide by 3600 to convert from hour rate to second rate
             pot_evaporation   = dA.get.pot_evaporation(currentDate, dA.get.apiSession()) / 3600     # Divide by 3600 to convert from hour rate to second rate
-            pot_infiltration  = dA.get.infiltration(self.dem, groundWaterHeight, self.Ks, self.landC)
+            pot_infiltration  = dA.get.infiltration(self.dem, (self.dem - 0.1), self.Ks, self.landC)
             percolation       = dA.get.percolation(self.dem, groundWaterHeight, self.Ks)
             i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration)
             evaporation, infiltration = dA.get.EvaporationInfiltration(surfaceWaterHeight, pot_evaporation,\
                                                                        pot_infiltration, e_ratio, i_ratio)
+            
+            # variables = {"precipitation": precipitation, "pot_evaporation": pot_evaporation, "pot_infiltration": pot_infiltration,\
+            #              "percolation": percolation}
+            # reporting.report.v2(currentDate, time, variables, config.output_path)
             
             # Loop
             for j in range(dt):
@@ -90,27 +90,40 @@ class mainModel():
                 surfaceWaterHeight = lfr.where(surfaceWaterHeight > 0, surfaceWaterHeight, 0) # Cannot be lower than zero
                 height = surfaceWaterHeight + self.dem
                 ldd = lfr.d8_flow_direction(height)
-                # groundWaterHeight update based on vertical fluxes
-                groundWaterHeight  = groundWaterHeight + infiltration - percolation
                 
-                # surfaceWaterRouting
-                slope              = (height - lfr.downstream(ldd, height)) / config.resolution
-                velocity           = 1/self.mannings * slope
-                velocity           = lfr.where(velocity > 1, 1, velocity)
-                discharge          = surfaceWaterHeight * velocity  
-                # surfaceWaterHeight = update.surfaceWaterHeight(surfaceWaterHeight, precipitation, evaporation,\
-                #                                                infiltration, discharge)
+                # groundWaterHeight update based on vertical fluxes
+                # groundWaterHeight  = groundWaterHeight + infiltration - percolation
+                
+                # surfaceWaterRouting version 1
+                # slope              = (height - lfr.downstream(ldd, height)) / config.resolution
+                # velocity           = 1/self.mannings * slope / 10
+                # velocity           = lfr.where(velocity > 1, 1, velocity)
+                # discharge          = surfaceWaterHeight * velocity  
+                # surfaceWaterHeight = surfaceWaterHeight + lfr.upstream(ldd, discharge) - discharge
+                
+                # surfaceWaterRouting version 2
+                alpha              = 1.5
+                beta               = 0.6
+                channelLength      = dG.generate.lue_one()*config.resolution
+                timestepduration   = 1.0
+                inflow             = precipitation
+                inflow             = lfr.where(inflow < 0.00001, 0.00001, inflow)
+                discharge          = lfr.kinematic_wave(ldd, discharge, inflow,\
+                                                        alpha, beta, timestepduration,\
+                                                        channelLength,)
+                
+                surfaceWaterHeight = surfaceWaterHeight + lfr.upstream(ldd, discharge) - discharge
+                
                 # groundWaterHeight  = update.groundWaterHeight(groundWaterHeight, infiltration, percolation)
                 # discharge          = update.surfaceWaterRouting(self.dem, surfaceWaterHeight)
-                
+                lfr.maximum(precipitation).get()
+               
             
-
             # Save / Report data
             print(f"Done: {i+1}/{dT}")
-            variables = {"surfaceWaterHeight": surfaceWaterHeight, "groundWaterHeight": groundWaterHeight, "flowVelocity": velocity,\
-                         "discharge": discharge, "mannings": self.mannings}
+            variables = {"surfaceWaterHeight": surfaceWaterHeight,\
+                         "discharge": discharge}
             reporting.report.v2(currentDate, time, variables, config.output_path)
-            lfr.maximum(surfaceWaterHeight).get()
         return 0
     
     
