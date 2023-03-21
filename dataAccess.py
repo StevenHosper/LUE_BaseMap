@@ -127,26 +127,30 @@ class get():
     
     def landC(landUse):
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
-        land_c = gen.lue_one()
-        for i in range(255):
+        land_c = gen.lue_one() * 0.8
+        mannings = gen.lue_one() * 0.045
+        for i in config.total:
             if i in configuration.concrete:
                 land_c = lfr.where(landUse == i, 0.001, land_c)
+                mannings = lfr.where(landUse == i, 0.015, mannings)
                 
-            elif i in configuration.green or 44 > i > 157:                              # Crops are given a multiplier of 1.2 as they also have pore structures \
+            elif i in configuration.green:                             # Crops are given a multiplier of 1.2 as they also have pore structures \
                 land_c = lfr.where(landUse == i, 1.1, land_c)            # but a different on can be assigned.
+                mannings = lfr.where(landUse == i, 0.035, mannings)
                 
             elif i in configuration.water:                                              # Any type of water is assigned 1, as this should have the saturated hydraulic conductivity \
                 land_c = lfr.where(landUse == i, 1.0, land_c)            # as precipitation value. --> However, these places probably have inflow from groundwater.
+                mannings = lfr.where(landUse == i, 0.030, mannings)
             
             elif i in configuration.compacted:
                 land_c = lfr.where(landUse == i, 0.7, land_c)
+                mannings = lfr.where(landUse == i, 0.025, mannings)
                 
             elif i in configuration.other_road:
                 land_c = lfr.where(landUse == i, 0.3, land_c) 
+                mannings = lfr.where(landUse == i, 0.015, mannings)
                 
-            else:
-                land_c = lfr.where(landUse == i, 0.8, land_c)
-        return land_c
+        return land_c, mannings
     
     def calculate_infiltration(Ks, landC):
         # Simplified version where the saturated hydraulic conductivity
@@ -155,8 +159,8 @@ class get():
     
     def precipitation(date, session):
         if config.v2:
-            random = np.random.randint(0, 300)
-            if random <= 50:
+            random = np.random.randint(0, config.dT)
+            if random <= config.dT/2:
                 precipitation = gen.lue_one()*0.05
                 kernel = np.array(
                 [
@@ -182,7 +186,7 @@ class get():
                     precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
             else:
                 precipitation = gen.lue_zero()
-        return precipitation
+        return precipitation * np.random.randint(1,25) / 1000
     
     def pot_evaporation(date, session):
         if config.v2:

@@ -48,32 +48,31 @@ class mainModel():
         landUse         = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)        # Land-use, example: road
         soilType        = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)              # example: sand or clay
         self.Ks         = dA.get.Ks(soilType)
-        self.landC      = dA.get.landC(landUse)
+        self.landC, self.mannings = dA.get.landC(landUse)
         
         # Load initial values for waterheight
-        iniSurfaceWaterHeight = lfr.where(self.dem < config.initialWaterTable, config.initialWaterTable - self.dem, 0)
-        iniGroundWaterHeight  = self.dem - config.waterBelowDEM
+        self.iniSurfaceWaterHeight = lfr.where(self.dem < config.initialWaterTable, config.initialWaterTable - self.dem, 0)
+        self.iniGroundWaterHeight  = self.dem - config.waterBelowDEM
         for i in config.water:
-            iniGroundWaterHeight = lfr.where(landUse == i, self.dem, iniGroundWaterHeight)
+            self.iniGroundWaterHeight = lfr.where(landUse == i, self.dem, self.iniGroundWaterHeight)
         
         # Reporting
-        variables       = {"iniSurfaceWaterHeight": iniSurfaceWaterHeight, "iniGroundWaterHeight": iniGroundWaterHeight}
+        variables       = {"iniSurfaceWaterHeight": self.iniSurfaceWaterHeight, "iniGroundWaterHeight": self.iniGroundWaterHeight}
         reporting.report.v2(config.startDate, 0, variables, config.output_path)
-        
-        return iniSurfaceWaterHeight, iniGroundWaterHeight
+
     
     @lfr.runtime_scope 
-    def dynamicModel(self, iniSurfaceWaterHeight, iniGroundWaterHeight):
+    def dynamicModel(self):
         dt = config.dt              # Amount of small timesteps for routing in seconds
         dT = config.dT              # Amount of large timesteps for loading and saving data
-        surfaceWaterHeight = iniSurfaceWaterHeight
-        groundWaterHeight  = iniGroundWaterHeight
+        surfaceWaterHeight = self.iniSurfaceWaterHeight
+        groundWaterHeight  = self.iniGroundWaterHeight
         discharge          = dG.generate.lue_zero() # Initial discharge through cell is zero (is speed of the water column in m/s)
         
         for i in range(int((config.endDate - config.startDate).days * dT)):
             # Timing and date
             currentDate = config.startDate + datetime.timedelta(minutes = i * dt/60)                # The actual date
-            time = i * dt / 60                                                                      # Time in minutes
+            time = int(i * dt / 60)                                                                 # Time in minutes
             
             # Load data
             precipitation     = dA.get.precipitation(currentDate, dA.get.apiSession()) / 3600       # Divide by 3600 to convert from hour rate to second rate
@@ -86,17 +85,32 @@ class mainModel():
             
             # Loop
             for j in range(dt):
-                surfaceWaterHeight = update.surfaceWaterHeight(surfaceWaterHeight, precipitation, evaporation,\
-                                                               infiltration, discharge)
-                groundWaterHeight  = update.groundWaterHeight(groundWaterHeight, infiltration, percolation)
-                discharge          = update.surfaceWaterRouting(self.dem, surfaceWaterHeight)
+                # surfaceWaterHeight update based on vertical fluxes
+                surfaceWaterHeight = surfaceWaterHeight + precipitation - evaporation
+                surfaceWaterHeight = lfr.where(surfaceWaterHeight > 0, surfaceWaterHeight, 0) # Cannot be lower than zero
+                height = surfaceWaterHeight + self.dem
+                ldd = lfr.d8_flow_direction(height)
+                # groundWaterHeight update based on vertical fluxes
+                groundWaterHeight  = groundWaterHeight + infiltration - percolation
+                
+                # surfaceWaterRouting
+                slope              = (height - lfr.downstream(ldd, height)) / config.resolution
+                velocity           = 1/self.mannings * slope
+                velocity           = lfr.where(velocity > 1, 1, velocity)
+                discharge          = surfaceWaterHeight * velocity  
+                # surfaceWaterHeight = update.surfaceWaterHeight(surfaceWaterHeight, precipitation, evaporation,\
+                #                                                infiltration, discharge)
+                # groundWaterHeight  = update.groundWaterHeight(groundWaterHeight, infiltration, percolation)
+                # discharge          = update.surfaceWaterRouting(self.dem, surfaceWaterHeight)
                 
             
 
             # Save / Report data
-            variables = {"surfacewater": surfaceWaterHeight, "discharge": discharge}
+            print(f"Done: {i+1}/{dT}")
+            variables = {"surfaceWaterHeight": surfaceWaterHeight, "groundWaterHeight": groundWaterHeight, "flowVelocity": velocity,\
+                         "discharge": discharge, "mannings": self.mannings}
             reporting.report.v2(currentDate, time, variables, config.output_path)
-            
+            lfr.maximum(surfaceWaterHeight).get()
         return 0
     
     
@@ -124,8 +138,8 @@ lfr.start_hpx_runtime(cfg)
 # root locality unless you know what you are doing.
 if lfr.on_root_locality():
     # Run the main model
-    mainModel()
-    mainModel.dynamicModel()
+    main = mainModel()
+    main.dynamicModel()
     
     # Process the results into a gif
     # MakeGIF.main()
