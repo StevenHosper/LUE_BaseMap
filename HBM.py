@@ -45,7 +45,8 @@ class mainModel():
         soilType        = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)              # example: sand or clay
         self.Ks         = dA.get.Ks(soilType)
         self.landC, self.mannings = dA.get.landC(landUse)
-        self.ldd = lfr.d8_flow_direction(self.dem)
+        # self.ldd = lfr.d8_flow_direction(self.dem)
+        self.ldd        = lfr.from_gdal(config.path + f'/data/{config.scenario}/ldd_pcr_shaped.tiff', config.partitionShape)
         # Load initial values for waterheight
         self.iniSurfaceWaterHeight = lfr.where(self.dem < config.initialWaterTable, config.initialWaterTable - self.dem, 0)
         self.iniGroundWaterHeight  = self.dem - config.waterBelowDEM

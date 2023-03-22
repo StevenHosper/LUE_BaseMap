@@ -15,6 +15,7 @@ import configuration as config
 from dataGen import generate as gen
 import requests
 from pcraster import aguila
+import math
 
 class get():
     def apiSession():
@@ -246,6 +247,24 @@ class get():
             i_ratio = gen.lue_zero()
             e_ratio = gen.lue_zero()
         return i_ratio, e_ratio
+    
+    def interception(precipitation, landUse):
+        # Im this simplified version the landUse type will be used for the LAI
+        # This should be improved in a future version
+        k = 0.5         # Constant taken from (Brolsma et al., 2010)
+        
+        LAI = gen.lue_zero()
+        
+        for i in config.total:
+            if i in config.green:
+                LAI = lfr.where(landUse == i, 3, LAI)
+        
+        
+        f = math.e()**(-k * LAI)
+        
+        interception = (gen.lue_one() - f) * precipitation        
+        
+        return interception
     
     def groundFlow():
         pass
