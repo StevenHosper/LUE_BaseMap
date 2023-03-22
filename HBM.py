@@ -45,31 +45,31 @@ class mainModel():
         soilType        = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)              # example: sand or clay
         self.Ks         = dA.get.Ks(soilType)
         self.landC, self.mannings = dA.get.landC(landUse)
-        
+        self.ldd = lfr.d8_flow_direction(self.dem)
         # Load initial values for waterheight
         self.iniSurfaceWaterHeight = lfr.where(self.dem < config.initialWaterTable, config.initialWaterTable - self.dem, 0)
         self.iniGroundWaterHeight  = self.dem - config.waterBelowDEM
         for i in config.water:
             self.iniGroundWaterHeight = lfr.where(landUse == i, self.dem, self.iniGroundWaterHeight)
-        
+
         # Reporting
         variables       = {"iniSurfaceWaterHeight": self.iniSurfaceWaterHeight}
         reporting.report.v2(config.startDate, 0, variables, config.output_path)
 
-    
-    @lfr.runtime_scope 
+
+    @lfr.runtime_scope
     def dynamicModel(self):
         dt = config.dt              # Amount of small timesteps for routing in seconds
         dT = config.dT              # Amount of large timesteps for loading and saving data
         surfaceWaterHeight = self.iniSurfaceWaterHeight
         groundWaterHeight  = self.iniGroundWaterHeight
         discharge          = dG.generate.lue_zero() # Initial discharge through cell is zero (is speed of the water column in m/s)
-        
+
         for i in range(int((config.endDate - config.startDate).days * dT)):
             # Timing and date
             currentDate = config.startDate + datetime.timedelta(minutes = i * dt/60)                # The actual date
             time = int(i * dt / 60)                                                                 # Time in minutes
-            
+
             # Load data
             precipitation     = dA.get.precipitation(currentDate, dA.get.apiSession()) / 3600       # Divide by 3600 to convert from hour rate to second rate
             pot_evaporation   = dA.get.pot_evaporation(currentDate, dA.get.apiSession()) / 3600     # Divide by 3600 to convert from hour rate to second rate
@@ -78,56 +78,39 @@ class mainModel():
             i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration)
             evaporation, infiltration = dA.get.EvaporationInfiltration(surfaceWaterHeight, pot_evaporation,\
                                                                        pot_infiltration, e_ratio, i_ratio)
-            
-            # variables = {"precipitation": precipitation, "pot_evaporation": pot_evaporation, "pot_infiltration": pot_infiltration,\
-            #              "percolation": percolation}
-            # reporting.report.v2(currentDate, time, variables, config.output_path)
-            
+
+            variables = {"precipitation": precipitation, "pot_evaporation": pot_evaporation, "pot_infiltration": pot_infiltration,\
+                         "percolation": percolation}
+            reporting.report.v2(currentDate, time, variables, config.output_path)
+
             # Loop
             for j in range(dt):
                 # surfaceWaterHeight update based on vertical fluxes
-                surfaceWaterHeight = surfaceWaterHeight + precipitation - evaporation
-                surfaceWaterHeight = lfr.where(surfaceWaterHeight > 0, surfaceWaterHeight, 0) # Cannot be lower than zero
-                height = surfaceWaterHeight + self.dem
-                ldd = lfr.d8_flow_direction(height)
-                
-                # groundWaterHeight update based on vertical fluxes
-                # groundWaterHeight  = groundWaterHeight + infiltration - percolation
-                
-                # surfaceWaterRouting version 1
-                # slope              = (height - lfr.downstream(ldd, height)) / config.resolution
-                # velocity           = 1/self.mannings * slope / 10
-                # velocity           = lfr.where(velocity > 1, 1, velocity)
-                # discharge          = surfaceWaterHeight * velocity  
-                # surfaceWaterHeight = surfaceWaterHeight + lfr.upstream(ldd, discharge) - discharge
-                
-                # surfaceWaterRouting version 2
+                surfaceWaterHeight = discharge / (config.resolution ** 2)
+                inflow             = precipitation - evaporation - infiltration
+                inflow             = lfr.where(inflow > 0.00001, inflow, 0.00001) # Cannot be lower than zero
+
+                # surfaceWaterRouting
                 alpha              = 1.5
                 beta               = 0.6
                 channelLength      = dG.generate.lue_one()*config.resolution
                 timestepduration   = 1.0
-                inflow             = precipitation
-                inflow             = lfr.where(inflow < 0.00001, 0.00001, inflow)
-                discharge          = lfr.kinematic_wave(ldd, discharge, inflow,\
+                discharge          = lfr.kinematic_wave(self.ldd, discharge, inflow,\
                                                         alpha, beta, timestepduration,\
                                                         channelLength,)
-                
-                surfaceWaterHeight = surfaceWaterHeight + lfr.upstream(ldd, discharge) - discharge
-                
-                # groundWaterHeight  = update.groundWaterHeight(groundWaterHeight, infiltration, percolation)
-                # discharge          = update.surfaceWaterRouting(self.dem, surfaceWaterHeight)
+
                 lfr.maximum(precipitation).get()
-               
-            
+
+
             # Save / Report data
             print(f"Done: {i+1}/{dT}")
             variables = {"surfaceWaterHeight": surfaceWaterHeight,\
                          "discharge": discharge}
             reporting.report.v2(currentDate, time, variables, config.output_path)
         return 0
-    
-    
-    
+
+
+
     # Initialize HPX runtime and run model, on the root locality -------------------
 # General configuration options, which are valid on all
 # platforms. Platform-specific options can be passed on the command line.
@@ -153,8 +136,8 @@ if lfr.on_root_locality():
     # Run the main model
     main = mainModel()
     main.dynamicModel()
-    
+
     # Process the results into a gif
     # MakeGIF.main()
-    
+
 print("--- %s seconds ---" % (time.time() - start_time))

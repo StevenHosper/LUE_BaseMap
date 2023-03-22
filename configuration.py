@@ -11,11 +11,11 @@ import os
 ### GENERAL SETTINGS ###
 network      = False                                                    # use network disk of NS [True] or local disk [False]
 useAPI       = False                                                    # use API functionality to access data
-scenario     = "generated"                                              # scenarios : ["De Wupsel", "De Wupsel", "De Tol", "De Wupsel10", "unitTest"]
+scenario     = "De Hupsel"                                              # scenarios : ["generated", "De Hupsel", "De Tol", "De Hupsel10", "unitTest"]
 startDate    = datetime.date(year = 2023, month = 2, day = 23)
 endDate      = datetime.date(year = 2023, month = 2, day = 24)
 dt           = 300                                                      # The time difference between reported data in seconds (for v2)
-dT           = 6                                                        # The times new data will be loaded in.
+dT           = 3                                                        # The times new data will be loaded in.
 v2 = True
 unitTest = False
 
@@ -35,8 +35,8 @@ demAPI    = "a60ad336-c95b-4fb6-b852-96fc352ee808"
 # Include processes
 includePrecipitation = True
 includeEvaporation   = True
-includeInfiltration  = True
-includePercolation   = True
+includeInfiltration  = False
+includePercolation   = False
 includeGroundFlow    = False                                              # Currently not working
 
 # Report
@@ -47,7 +47,7 @@ fluxes    = []
 initialWaterTable = 1.30
 waterBelowDEM     = 0.10
 
-if scenario == "De Wupsel" or scenario == "De Tol":
+if scenario == "De Hupsel" or scenario == "De Tol":
     arrayExtent     = 5000
     partitionExtent = 1000
     arrayShape      = 2 * (arrayExtent,)
@@ -59,7 +59,7 @@ elif scenario == "generated":
     arrayShape      = 2 * (arrayExtent,)
     partitionShape  = 2 * (partitionExtent,)
     resolution       = 1
-elif scenario == "De Wupsel10":
+elif scenario == "De Hupsel10":
     arrayExtent     = 2000
     partitionExtent = 1000
     arrayShape      = 2 * (arrayExtent,)
