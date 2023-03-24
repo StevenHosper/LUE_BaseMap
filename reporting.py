@@ -11,7 +11,7 @@ import configuration as config
 class report():
     def v2(date, time, variables, output_path):
         for variable, data in variables.items():
-            lfr.to_gdal(data, output_path + f'{variable}_{date}_{time}.tiff')
+            lfr.to_gdal(data, output_path + f'{variable}_{date}_{time}_infil.tiff')
         return 0
     
     

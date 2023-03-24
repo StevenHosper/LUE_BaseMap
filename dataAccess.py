@@ -187,11 +187,11 @@ class get():
                     precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
             else:
                 precipitation = gen.lue_zero()
-        return precipitation * np.random.randint(15,35) / 1000
+        return gen.lue_one() / 1000
     
     def pot_evaporation(date, session):
         if config.v2:
-            pot_evaporation = gen.lue_one() * 0.05 / 3600
+            pot_evaporation = gen.lue_one() * 0.8 / 12 / 1000
         else:
             if configuration.includeEvaporation:
                 if configuration.useAPI:
@@ -248,23 +248,36 @@ class get():
             e_ratio = gen.lue_zero()
         return i_ratio, e_ratio
     
-    def interception(precipitation, landUse):
+    def interception(interceptionStorage, interceptionStorageMax, precipitation, landUse):
         # Im this simplified version the landUse type will be used for the LAI
         # This should be improved in a future version
         k = 0.5         # Constant taken from (Brolsma et al., 2010)
         
-        LAI = gen.lue_zero()
+        f = gen.lue_zero()  # If not stated then there are no leafs
         
         for i in config.total:
             if i in config.green:
-                LAI = lfr.where(landUse == i, 3, LAI)
-        
-        
-        f = math.e()**(-k * LAI)
+                f = lfr.where(landUse == i, math.exp(-k * 3), 0)
         
         interception = (gen.lue_one() - f) * precipitation        
-        
-        return interception
+        interception = lfr.where(interceptionStorageMax < interceptionStorage + interception, \
+                                 interceptionStorageMax - interceptionStorage, interception)
+        if config.includeInfiltration == False:
+            interception = gen.lue_zero()            
+        precipitation = precipitation - interception
+        return interception, precipitation
+    
+    def interceptionStorageMax(landUse):
+        LAI = gen.lue_zero()
+        for i in config.total:
+            if i in config.green:
+                LAI = lfr.where(landUse == i, 3, LAI) # Currently everything within the 'green' category has an LAI of 3.
+        interceptionStorageMax = (LAI / 3) / 1000
+        return interceptionStorageMax
+    
+    def interceptionStorage(interceptionStorageOld, interception, evapotranspiration):
+        interceptionStorage = interceptionStorageOld + interception - evapotranspiration
+        return interceptionStorage
     
     def groundFlow():
         pass

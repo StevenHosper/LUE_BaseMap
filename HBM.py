@@ -41,17 +41,17 @@ class mainModel():
         # Initialize data required from memory files
         # Get all constants
         self.dem        = lfr.from_gdal(config.path + f'/data/{config.scenario}/dem.tiff', config.partitionShape)           # DEM map of the study area
-        landUse         = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)        # Land-use, example: road
+        self.landUse         = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)        # Land-use, example: road
         soilType        = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)              # example: sand or clay
         self.Ks         = dA.get.Ks(soilType)
-        self.landC, self.mannings = dA.get.landC(landUse)
+        self.landC, self.mannings = dA.get.landC(self.landUse)
         # self.ldd = lfr.d8_flow_direction(self.dem)
         self.ldd        = lfr.from_gdal(config.path + f'/data/{config.scenario}/ldd_pcr_shaped.tiff', config.partitionShape)
         # Load initial values for waterheight
         self.iniSurfaceWaterHeight = lfr.where(self.dem < config.initialWaterTable, config.initialWaterTable - self.dem, 0)
         self.iniGroundWaterHeight  = self.dem - config.waterBelowDEM
         for i in config.water:
-            self.iniGroundWaterHeight = lfr.where(landUse == i, self.dem, self.iniGroundWaterHeight)
+            self.iniGroundWaterHeight = lfr.where(self.landUse == i, self.dem, self.iniGroundWaterHeight)
 
         # Reporting
         variables       = {"iniSurfaceWaterHeight": self.iniSurfaceWaterHeight}
@@ -64,12 +64,14 @@ class mainModel():
         dT = config.dT              # Amount of large timesteps for loading and saving data
         surfaceWaterHeight = self.iniSurfaceWaterHeight
         groundWaterHeight  = self.iniGroundWaterHeight
-        discharge          = dG.generate.lue_zero() # Initial discharge through cell is zero (is speed of the water column in m/s)
-
+        discharge          = lfr.from_gdal(config.path + f'/data/{config.scenario}/discharge_1mm1t2h40.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
+        interceptionStorageMax = dA.get.interceptionStorageMax(landUse=self.landUse)
+        interceptionStorage    = dG.generate.lue_zero()
+        
         for i in range(int((config.endDate - config.startDate).days * dT)):
             # Timing and date
             currentDate = config.startDate + datetime.timedelta(minutes = i * dt/60)                # The actual date
-            time = int(i * dt / 60)                                                                 # Time in minutes
+            time = int(i * dt/60)                                                                 # Time in minutes
 
             # Load data
             precipitation     = dA.get.precipitation(currentDate, dA.get.apiSession()) / 3600       # Divide by 3600 to convert from hour rate to second rate
@@ -80,16 +82,18 @@ class mainModel():
             evaporation, infiltration = dA.get.EvaporationInfiltration(surfaceWaterHeight, pot_evaporation,\
                                                                        pot_infiltration, e_ratio, i_ratio)
 
-            variables = {"precipitation": precipitation, "pot_evaporation": pot_evaporation, "pot_infiltration": pot_infiltration,\
-                         "percolation": percolation}
-            reporting.report.v2(currentDate, time, variables, config.output_path)
+            #variables = {"precipitation": precipitation, "pot_evaporation": pot_evaporation, "pot_infiltration": pot_infiltration,\
+            #             "percolation": percolation}
+            #reporting.report.v2(currentDate, time, variables, config.output_path)
 
             # Loop
             for j in range(dt):
                 # surfaceWaterHeight update based on vertical fluxes
                 surfaceWaterHeight = discharge / (config.resolution ** 2)
+                # interception, precipitation = dA.get.interception(interceptionStorage, interceptionStorageMax,\
+                #                                                   precipitation, self.landUse)
                 inflow             = precipitation - evaporation - infiltration
-                inflow             = lfr.where(inflow > 0.00001, inflow, 0.00001) # Cannot be lower than zero
+                # inflow             = lfr.where(inflow > 0, inflow, 0) # Cannot be lower than zero
 
                 # surfaceWaterRouting
                 alpha              = 1.5
@@ -105,8 +109,8 @@ class mainModel():
 
             # Save / Report data
             print(f"Done: {i+1}/{dT}")
-            variables = {"surfaceWaterHeight": surfaceWaterHeight,\
-                         "discharge": discharge}
+            variables = {"surfaceWaterHeight": surfaceWaterHeight, "inflow": inflow,\
+                         "discharge": discharge,}
             reporting.report.v2(currentDate, time, variables, config.output_path)
         return 0
 
