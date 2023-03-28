@@ -105,11 +105,11 @@ class get():
         # Assign K for de Wupsel
         Ks = gen.lue_one() * 0.05
         porosity = gen.lue_one() * 0.3
-        #scTable = pd.read_csv(config.path + f'/data/soil_conversion.csv')
-        #ID = scTable["ID"]
-        #KsValue = scTable["Ks"]
-        #for count, ID in enumerate(ID):
-        #    Ks = lfr.where(soilType == ID, KsValue[count], Ks)
+        scTable = pd.read_csv(config.path + f'/data/soil_conversion.csv')
+        ID = scTable["ID"]
+        KsValue = scTable["Ks"]
+        for count, ID in enumerate(ID):
+            Ks = lfr.where(soilType == ID, KsValue[count], Ks)
             
         return (Ks / 86400), porosity
     
@@ -174,7 +174,7 @@ class get():
                     precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
             else:
                 precipitation = gen.lue_zero()
-        return gen.lue_one() * 7 / (1000 * 3600) # Convert to meter / second rate
+        return gen.lue_one() * 10 / (1000 * 3600) # Convert to meter / second rate
     
     def pot_evaporation(date, session):
         if config.v2:
@@ -189,11 +189,11 @@ class get():
                 pot_evaporation = gen.lue_zero()
         return pot_evaporation / 3600 # Convert to per second rate
     
-    def infiltration(groundWaterHeight, Ks, land_c):
+    def infiltration(groundWaterHeight, Ks, land_c, porosity):
         if configuration.includeInfiltration:
             pot_infiltration = get.calculate_infiltration(Ks, land_c)
-            pot_infiltration = lfr.where((groundWaterHeight - configuration.imperviousLayer) < pot_infiltration, \
-                                          configuration.imperviousLayer - groundWaterHeight, pot_infiltration)
+            pot_infiltration = lfr.where((groundWaterHeight - configuration.imperviousLayer)*porosity < pot_infiltration, \
+                                          (configuration.imperviousLayer - groundWaterHeight)*porosity, pot_infiltration)
         else:
             pot_infiltration = gen.lue_zero()
         return pot_infiltration

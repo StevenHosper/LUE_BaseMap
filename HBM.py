@@ -78,7 +78,7 @@ class mainModel():
             # Load data
             precipitation     = dA.get.precipitation(currentDate, dA.get.apiSession())      * config.timestep
             pot_evaporation   = dA.get.pot_evaporation(currentDate, dA.get.apiSession())    * config.timestep
-            pot_infiltration  = dA.get.infiltration(Sgw, self.Ks, self.landC)               * config.timestep
+            pot_infiltration  = dA.get.infiltration(Sgw, self.Ks, self.landC, self.porosity)               * config.timestep
             percolation       = dA.get.percolation(self.dem, groundWaterHeight, self.Ks)    * config.timestep
             i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration)
             evaporation, infiltration = dA.get.EvaporationInfiltration(surfaceWaterHeight, pot_evaporation,\
@@ -121,21 +121,21 @@ class mainModel():
                 discharge          = lfr.kinematic_wave(self.ldd, discharge, inflow,\
                                                         alpha, beta, timestepduration,\
                                                         channelLength,)
-
                 lfr.maximum(precipitation).get()
 
             # Groundwaterheight map
-            
             # Save / Report data
             print(f"Done: {i+1}/{dT}")
             variables = {"inflow": inflow, "infiltration": infiltration,\
                          "discharge": discharge,}
             reporting.report.v2(currentDate, time, variables, config.output_path)
+            
+            input("Press Enter to continue...")
         return 0
 
 
 
-    # Initialize HPX runtime and run model, on the root locality -------------------
+# Initialize HPX runtime and run model, on the root locality -------------------
 # General configuration options, which are valid on all
 # platforms. Platform-specific options can be passed on the command line.
 cfg = [
@@ -146,7 +146,7 @@ cfg = [
     # Disable HPX' short options
     "hpx.commandline.aliasing!=0",
     # Don't print diagnostics during forced terminate
-    "hpx.diagnostics_on_terminate!=0",
+    "hpx.diagnostics_on_terminate!=1",
     # Make AGAS clean up resources faster than by default
     "hpx.agas.max_pending_refcnt_requests!=50",
 ]

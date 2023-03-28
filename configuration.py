@@ -16,7 +16,7 @@ startDate    = datetime.date(year = 2023, month = 2, day = 23)
 endDate      = datetime.date(year = 2023, month = 2, day = 24)
 dt           = 60                                                       # The time difference between reported data in seconds (for v2)
 timestep     = 1
-dT           = 10                                                        # The times new data will be loaded in.
+dT           = 5                                                        # The times new data will be loaded in.
 v2 = True
 unitTest = False
 
