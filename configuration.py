@@ -14,8 +14,9 @@ useAPI       = False                                                    # use AP
 scenario     = "De Hupsel"                                              # scenarios : ["generated", "De Hupsel", "De Tol", "De Hupsel10", "unitTest"]
 startDate    = datetime.date(year = 2023, month = 2, day = 23)
 endDate      = datetime.date(year = 2023, month = 2, day = 24)
-dt           = 30                                                      # The time difference between reported data in seconds (for v2)
-dT           = 2                                                        # The times new data will be loaded in.
+dt           = 60                                                       # The time difference between reported data in seconds (for v2)
+timestep     = 1
+dT           = 10                                                        # The times new data will be loaded in.
 v2 = True
 unitTest = False
 
@@ -35,7 +36,7 @@ demAPI    = "a60ad336-c95b-4fb6-b852-96fc352ee808"
 # Include processes
 includePrecipitation = True
 includeEvaporation   = True
-includeInfiltration  = False
+includeInfiltration  = True
 includeInterception  = False
 includePercolation   = False
 includeGroundFlow    = False                                              # Currently not working
@@ -46,7 +47,7 @@ fluxes    = []
 
 # Set values
 initialWaterTable = 1.30
-waterBelowDEM     = 0.05
+waterBelowDEM     = 0.0001
 imperviousLayer   = 2.00
 
 if scenario == "De Hupsel" or scenario == "De Tol":
