@@ -16,6 +16,7 @@ from dataGen import generate as gen
 import requests
 from pcraster import aguila
 import math
+import pandas as pd
 
 class get():
     def apiSession():
@@ -100,31 +101,17 @@ class get():
         data = lfr.from_gdal(variable_path, configuration.partitionShape)
         return data
     
-    def Ks(soilType):
+    def soil(soilType):
         # Assign K for de Wupsel
         Ks = gen.lue_one() * 0.05
-        for i in range(20):
-            if i == 2:
-                Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
-            if i == 9:
-                Ks = lfr.where(soilType == i, 3.0*10**0, Ks)           # Hydraulic conductivity in m/day
-            if i == 10:
-                Ks = lfr.where(soilType == i, 4.0*10**0, Ks)           # Hydraulic conductivity in m/day
-            if i == 11:
-                Ks = lfr.where(soilType == i, 4.0*10**-1, Ks)           # Hydraulic conductivity in m/day
-            if i == 12:
-                Ks = lfr.where(soilType == i, 2.5*10**0, Ks)           # Hydraulic conductivity in m/day
-            if i == 13:
-                Ks = lfr.where(soilType == i, 2.0*10**-1, Ks)           # Hydraulic conductivity in m/day
-            if i == 15:
-                Ks = lfr.where(soilType == i, 6.0*10**-1, Ks)           # Hydraulic conductivity in m/day
-            if i == 16:
-                Ks = lfr.where(soilType == i, 1.0*10**-1, Ks)           # Hydraulic conductivity in m/day
-            if i == 17:
-                Ks = lfr.where(soilType == i, 4.0*10**-2, Ks)           # Hydraulic conductivity in m/day
-            if i == 19:
-                Ks = lfr.where(soilType == i, 3.0*10**-2, Ks)           # Hydraulic conductivity in m/day
-        return Ks / 86400 # to m/s
+        porosity = gen.lue_one() * 0.3
+        #scTable = pd.read_csv(config.path + f'/data/soil_conversion.csv')
+        #ID = scTable["ID"]
+        #KsValue = scTable["Ks"]
+        #for count, ID in enumerate(ID):
+        #    Ks = lfr.where(soilType == ID, KsValue[count], Ks)
+            
+        return (Ks / 86400), porosity
     
     def landC(landUse):
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
@@ -187,7 +174,7 @@ class get():
                     precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
             else:
                 precipitation = gen.lue_zero()
-        return gen.lue_one() / 1000
+        return gen.lue_one() / (1000 * 3600) # Convert to meter / second rate
     
     def pot_evaporation(date, session):
         if config.v2:
@@ -200,7 +187,7 @@ class get():
                     pot_evaporation   = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'potential_evaporation')
             else:
                 pot_evaporation = gen.lue_zero()
-        return pot_evaporation
+        return pot_evaporation / 3600 # Convert to per second rate
     
     def infiltration(dem, groundWaterHeight, Ks, land_c):
         if configuration.includeInfiltration:
