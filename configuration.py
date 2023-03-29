@@ -14,9 +14,9 @@ useAPI       = False                                                    # use AP
 scenario     = "De Hupsel"                                              # scenarios : ["generated", "De Hupsel", "De Tol", "De Hupsel10", "unitTest"]
 startDate    = datetime.date(year = 2023, month = 2, day = 23)
 endDate      = datetime.date(year = 2023, month = 2, day = 24)
-dt           = 60                                                       # The time difference between reported data in seconds (for v2)
-timestep     = 1
-dT           = 5                                                        # The times new data will be loaded in.
+dt           = 12                                                       # The time difference between reported data in seconds (for v2)
+timestep     = 5
+dT           = 60                                                        # The times new data will be loaded in.
 v2 = True
 unitTest = False
 

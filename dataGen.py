@@ -40,7 +40,7 @@ class generate():
         array = np.ones((config.arrayExtent - 2, config.arrayExtent - 2), dtype= np.uint8)
         boundaryCell = np.pad(array, pad_width=1, mode='constant', constant_values=0)
         boundaryCell = lfr.from_numpy(boundaryCell, config.partitionShape)
-        lfr.to_gdal(boundaryCell, config.path + 'boundaryCell.tiff')
+        # lfr.to_gdal(boundaryCell, config.path + 'boundaryCell.tiff')
         return boundaryCell
     
     def lue_zero():

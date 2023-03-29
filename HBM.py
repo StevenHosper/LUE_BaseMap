@@ -65,7 +65,7 @@ class mainModel():
         surfaceWaterHeight = self.iniSurfaceWaterHeight
         groundWaterHeight  = self.iniGroundWaterHeight
         discharge          = dG.generate.lue_zero()
-        #discharge          = lfr.from_gdal(config.path + f'/data/{config.scenario}/discharge_1mm1t2h40.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
+        #discharge          = lfr.from_gdal(config.path + f'/data/HupselDischarge/1_discharge_2023-02-23_59.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
         interceptionStorageMax = dA.get.interceptionStorageMax(landUse=self.landUse)
         interceptionStorage    = dG.generate.lue_zero()
         Sgw                = self.iniGroundWaterStorage                                             # In groundwaterheight in meters (not accounting for porosity)
@@ -73,12 +73,12 @@ class mainModel():
         for i in range(int((config.endDate - config.startDate).days * dT)):
             # Timing and date
             currentDate = config.startDate + datetime.timedelta(seconds = i * dt * config.timestep)                # The actual date
-            time = int(i * (dt*config.timestep)/60)                                                                # Time in minutes
+            time = int((i * (dt*config.timestep)/60))                                                                # Time in minutes
 
             # Load data
             precipitation     = dA.get.precipitation(currentDate, dA.get.apiSession())      * config.timestep
             pot_evaporation   = dA.get.pot_evaporation(currentDate, dA.get.apiSession())    * config.timestep
-            pot_infiltration  = dA.get.infiltration(Sgw, self.Ks, self.landC, self.porosity)               * config.timestep
+            pot_infiltration  = dA.get.infiltration(Sgw, self.Ks, self.landC, self.porosity)* config.timestep
             percolation       = dA.get.percolation(self.dem, groundWaterHeight, self.Ks)    * config.timestep
             i_ratio, e_ratio  = dA.get.ieRatio(pot_evaporation, pot_infiltration)
             evaporation, infiltration = dA.get.EvaporationInfiltration(surfaceWaterHeight, pot_evaporation,\
@@ -126,7 +126,7 @@ class mainModel():
             # Groundwaterheight map
             # Save / Report data
             print(f"Done: {i+1}/{dT}")
-            variables = {"inflow": inflow, "infiltration": infiltration,\
+            variables = {"groundWaterHeight": groundWaterHeight,\
                          "discharge": discharge,}
             reporting.report.v2(currentDate, time, variables, config.output_path)
             
