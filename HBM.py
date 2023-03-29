@@ -52,7 +52,7 @@ class mainModel():
         self.iniSurfaceWaterHeight  = lfr.where(self.dem < config.initialWaterTable, config.initialWaterTable - self.dem, 0)
         self.iniGroundWaterStorage  = dG.generate.lue_one()*(config.imperviousLayer - config.waterBelowDEM)             # The height between the impervious bottom layer and the top of the groundwater table is the amount of water stored.
         self.iniGroundWaterHeight   = self.dem - config.waterBelowDEM
-
+        #self.iniGroundWaterHeight = lfr.from_gdal(config.path + f'/output/{config.scenario}/1_groundWaterHeight_2023-02-23_9.tiff', config.partitionShape)
         # Reporting
         # variables       = {"iniSurfaceWaterHeight": self.iniSurfaceWaterHeight, "iniGroundWaterHeight": self.iniGroundWaterHeight}
         # reporting.report.v2(config.startDate, 0, variables, config.output_path)
@@ -65,7 +65,7 @@ class mainModel():
         surfaceWaterHeight = self.iniSurfaceWaterHeight
         groundWaterHeight  = self.iniGroundWaterHeight
         discharge          = dG.generate.lue_zero()
-        #discharge          = lfr.from_gdal(config.path + f'/data/HupselDischarge/1_discharge_2023-02-23_59.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
+        #discharge          = lfr.from_gdal(config.path + f'/output/{config.scenario}/1_discharge_2023-02-23_9.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
         interceptionStorageMax = dA.get.interceptionStorageMax(landUse=self.landUse)
         interceptionStorage    = dG.generate.lue_zero()
         Sgw                = self.iniGroundWaterStorage                                             # In groundwaterheight in meters (not accounting for porosity)
@@ -99,9 +99,7 @@ class mainModel():
             for j in range(dt):
                 # surfaceWaterHeight update based on vertical fluxes
                 surfaceWaterHeight = discharge / (config.resolution ** 2)
-                surfaceWaterHeight = surfaceWaterHeight - evaporation - infiltration
-                surfaceWaterHeight = lfr.where(surfaceWaterHeight > 0, surfaceWaterHeight, 0)       # Once surface water height reaches zero, it cannot be lower
-                discharge          = surfaceWaterHeight * config.resolution ** 2                    # Convert surface water height back to discharge
+                
                 # interception, precipitation = dA.get.interception(interceptionStorage, interceptionStorageMax,\
                 #                                                   precipitation, self.landUse)
                 
@@ -110,8 +108,11 @@ class mainModel():
                 seepage    = lfr.where(Sgw > (config.imperviousLayer), (Sgw - config.imperviousLayer)*self.porosity, 0)             # The excess groundwater height * porosity is the outflow
                 Sgw        = lfr.where(Sgw > (config.imperviousLayer), config.imperviousLayer, Sgw)                                 # After the seepage the groundwater is back to the maximum groundwater height
                 
-                inflow             = precipitation + seepage
-                inflow             = lfr.where(inflow > 0.00000001, inflow, 0.00000001) # Cannot be lower than zero
+                surfaceWaterHeight = surfaceWaterHeight - evaporation - infiltration + precipitation + seepage
+                surfaceWaterHeight = lfr.where(surfaceWaterHeight > 0, surfaceWaterHeight, 0)       # Once surface water height reaches zero, it cannot be lower
+                discharge          = surfaceWaterHeight * config.resolution ** 2                    # Convert surface water height back to discharge
+                
+                inflow             = dG.generate.lue_one()*0.0000000001
 
                 # surfaceWaterRouting
                 alpha              = 1.5
@@ -124,10 +125,12 @@ class mainModel():
                 lfr.maximum(precipitation).get()
 
             # Groundwaterheight map
+            groundWaterHeight = self.dem - config.imperviousLayer + Sgw
+            
             # Save / Report data
             print(f"Done: {i+1}/{dT}")
-            variables = {"groundWaterHeight": groundWaterHeight,\
-                         "discharge": discharge,}
+            variables = {"infiltration": infiltration, "groundWaterHeight": groundWaterHeight,\
+                         "discharge": discharge, "Qgw": Qgw}
             reporting.report.v2(currentDate, time, variables, config.output_path)
             
             input("Press Enter to continue...")

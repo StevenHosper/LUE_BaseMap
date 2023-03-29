@@ -12,10 +12,10 @@ import os
 network      = False                                                    # use network disk of NS [True] or local disk [False]
 useAPI       = False                                                    # use API functionality to access data
 scenario     = "De Hupsel"                                              # scenarios : ["generated", "De Hupsel", "De Tol", "De Hupsel10", "unitTest"]
-startDate    = datetime.date(year = 2023, month = 2, day = 23)
-endDate      = datetime.date(year = 2023, month = 2, day = 24)
-dt           = 12                                                       # The time difference between reported data in seconds (for v2)
-timestep     = 5
+startDate    = datetime.date(year = 2023, month = 2, day = 24)
+endDate      = datetime.date(year = 2023, month = 2, day = 25)
+dt           = 60                                                       # The time difference between reported data in seconds (for v2)
+timestep     = 1
 dT           = 60                                                        # The times new data will be loaded in.
 v2 = True
 unitTest = False
@@ -47,7 +47,7 @@ fluxes    = []
 
 # Set values
 initialWaterTable = 1.30
-waterBelowDEM     = 0.0001
+waterBelowDEM     = 0.001
 imperviousLayer   = 2.00
 
 if scenario == "De Hupsel" or scenario == "De Tol":
