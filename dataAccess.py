@@ -174,11 +174,11 @@ class get():
                     precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
             else:
                 precipitation = gen.lue_zero()
-        return gen.lue_one() * 1 / (1000 * 3600) # Convert to meter / second rate
+        return gen.lue_one() * 0 / (1000 * 3600) # Convert to meter / second rate
     
     def pot_evaporation(date, session):
         if config.v2:
-            pot_evaporation = gen.lue_one() * 0.8 / 12 / 1000
+            pot_evaporation = gen.lue_one() * 10 / 10 / 1000
         else:
             if configuration.includeEvaporation:
                 if configuration.useAPI:
