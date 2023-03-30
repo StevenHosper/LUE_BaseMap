@@ -56,7 +56,7 @@ class mainModel():
         self.iniGroundWaterStorage  = self.iniGroundWaterHeight - config.imperviousLayer             # The height between the impervious bottom layer and the top of the groundwater table is the amount of water stored.
         #self.iniGroundWaterHeight = lfr.from_gdal(config.path + f'/data/HupselOutput/1_groundWaterHeight_2023-02-24_80.tiff', config.partitionShape)
         #self.iniDischarge         = dG.generate.lue_zero()
-        self.iniDischarge         = lfr.from_gdal(config.path + f'/data/HupselOutput/1_discharge_2023-02-24_80.tiff', config.partitionShape) / 60 # Initial discharge through cell is zero (is speed of the water column in m/s)
+        self.iniDischarge         = lfr.from_gdal(config.path + f'/data/HupselOutput/1_discharge_2023-02-24_80.tiff', config.partitionShape) / 600 # Initial discharge through cell is zero (is speed of the water column in m/s)
         
         # Reporting
         # variables       = {"iniSurfaceWaterHeight": self.iniSurfaceWaterHeight, "iniGroundWaterHeight": self.iniGroundWaterHeight}
