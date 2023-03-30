@@ -104,7 +104,7 @@ class get():
     def soil(soilType):
         # Assign K for de Wupsel
         Ks = gen.lue_one() * 0.05
-        porosity = gen.lue_one() * 0.3
+        porosity = gen.lue_one() * 0.35
         scTable = pd.read_csv(config.path + f'/data/soil_conversion.csv')
         ID = scTable["ID"]
         KsValue = scTable["Ks"]
