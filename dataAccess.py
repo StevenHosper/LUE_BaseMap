@@ -117,28 +117,34 @@ class get():
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
         land_c = gen.lue_one() * 0.8
         mannings = gen.lue_one() * 0.045
+        soil_c = gen.lue_one() * 0.5
         for i in config.total:
             if i in configuration.concrete:
                 land_c = lfr.where(landUse == i, 0.001, land_c)
                 mannings = lfr.where(landUse == i, 0.015, mannings)
+                soil_c = lfr.where(landUse == i, 0, soil_c)
                 
             elif i in configuration.green:                             # Crops are given a multiplier of 1.2 as they also have pore structures \
                 land_c = lfr.where(landUse == i, 1.1, land_c)            # but a different on can be assigned.
                 mannings = lfr.where(landUse == i, 0.035, mannings)
+                soil_c = lfr.where(landUse == i, 1, soil_c)
                 
             elif i in configuration.water:                                              # Any type of water is assigned 1, as this should have the saturated hydraulic conductivity \
                 land_c = lfr.where(landUse == i, 1.0, land_c)            # as precipitation value. --> However, these places probably have inflow from groundwater.
                 mannings = lfr.where(landUse == i, 0.030, mannings)
+                soil_c = lfr.where(landUse == i, 0, soil_c)
             
             elif i in configuration.compacted:
                 land_c = lfr.where(landUse == i, 0.7, land_c)
                 mannings = lfr.where(landUse == i, 0.025, mannings)
+                soil_c = lfr.where(landUse == i, 0.5, soil_c)
                 
             elif i in configuration.other_road:
                 land_c = lfr.where(landUse == i, 0.3, land_c) 
                 mannings = lfr.where(landUse == i, 0.015, mannings)
+                soil_c = lfr.where(landUse == i, 0.2, soil_c)
                 
-        return land_c, mannings
+        return land_c, mannings, soil_c
     
     def calculate_infiltration(Ks, landC):
         # Simplified version where the saturated hydraulic conductivity

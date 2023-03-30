@@ -45,14 +45,19 @@ class mainModel():
         self.landUse    = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)        # Land-use, example: road
         soilType        = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)              # example: sand or clay
         self.Ks, self.porosity    = dA.get.soil(soilType)
-        self.landC, self.mannings = dA.get.landC(self.landUse)
+        self.landC, self.mannings, self.soilC = dA.get.landC(self.landUse)
+        
         # self.ldd = lfr.d8_flow_direction(self.dem)
         self.ldd        = lfr.from_gdal(config.path + f'/data/{config.scenario}/ldd_pcr_shaped.tiff', config.partitionShape)
+        
         # Load initial values for waterheight
         self.iniSurfaceWaterHeight  = lfr.where(self.dem < config.initialWaterTable, config.initialWaterTable - self.dem, 0)
         self.iniGroundWaterStorage  = dG.generate.lue_one()*(config.imperviousLayer - config.waterBelowDEM)             # The height between the impervious bottom layer and the top of the groundwater table is the amount of water stored.
         #self.iniGroundWaterHeight   = self.dem - config.waterBelowDEM
         self.iniGroundWaterHeight = lfr.from_gdal(config.path + f'/output/{config.scenario}/1_groundWaterHeight_2023-02-24_20.tiff', config.partitionShape)
+        #self.iniDischarge         = dG.generate.lue_zero()
+        self.iniDischarge         = lfr.from_gdal(config.path + f'/data/HupselOutput/1_discharge_2023-02-24_80.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
+        
         # Reporting
         # variables       = {"iniSurfaceWaterHeight": self.iniSurfaceWaterHeight, "iniGroundWaterHeight": self.iniGroundWaterHeight}
         # reporting.report.v2(config.startDate, 0, variables, config.output_path)
@@ -62,13 +67,14 @@ class mainModel():
     def dynamicModel(self):
         dt = config.dt              # Amount of small timesteps for routing in seconds
         dT = config.dT              # Amount of large timesteps for loading and saving data
+        
         surfaceWaterHeight = self.iniSurfaceWaterHeight
         groundWaterHeight  = self.iniGroundWaterHeight
-        #discharge          = dG.generate.lue_zero()
-        discharge          = lfr.from_gdal(config.path + f'/output/{config.scenario}/1_discharge_2023-02-24_20.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
+        discharge          = self.iniDischarge
+        Sgw                = self.iniGroundWaterStorage                                             # In groundwaterheight in meters (not accounting for porosity)
+        
         interceptionStorageMax = dA.get.interceptionStorageMax(landUse=self.landUse)
         interceptionStorage    = dG.generate.lue_zero()
-        Sgw                = self.iniGroundWaterStorage                                             # In groundwaterheight in meters (not accounting for porosity)
         
         for i in range(int((config.endDate - config.startDate).days * dT)):
             # Timing and date
@@ -105,7 +111,8 @@ class mainModel():
                 
                 # Groundwater storage
                 Sgw        = lfr.where(dG.generate.boundaryCell(),\
-                             Sgw + (infiltration/self.porosity) - Qgw/self.porosity + lfr.upstream(gwLDD, Qgw)/self.porosity - (Sgw/config.imperviousLayer) * ref_evaporation,\
+                             Sgw + (infiltration/self.porosity) - Qgw/self.porosity + lfr.upstream(gwLDD, Qgw)/self.porosity \
+                                 - (Sgw/config.imperviousLayer) * ref_evaporation * self.soilC,\
                              Sgw) # Groundwater gets the infiltration
                 seepage    = lfr.where(Sgw > (config.imperviousLayer), (Sgw - config.imperviousLayer)*self.porosity, 0)             # The excess groundwater height * porosity is the outflow
                 Sgw        = lfr.where(Sgw > (config.imperviousLayer), config.imperviousLayer, Sgw)                                 # After the seepage the groundwater is back to the maximum groundwater height
