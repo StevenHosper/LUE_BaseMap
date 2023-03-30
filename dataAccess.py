@@ -180,11 +180,11 @@ class get():
                     precipitation  = get.localTemporal(f'{configuration.path}/data/generated/{configuration.arrayExtent}/', date, 'precipitation')
             else:
                 precipitation = gen.lue_zero()
-        return gen.lue_one() * 0 / (1000 * 3600) # Convert to meter / second rate
+        return gen.lue_one() * 1 / (1000 * 3600) # Convert to meter / second rate
     
     def pot_evaporation(date, session):
         if config.v2:
-            pot_evaporation = gen.lue_one() * 10 / 10 / 1000
+            pot_evaporation = gen.lue_one() * 3 / 10 / 1000
         else:
             if configuration.includeEvaporation:
                 if configuration.useAPI:
@@ -195,11 +195,11 @@ class get():
                 pot_evaporation = gen.lue_zero()
         return pot_evaporation / 3600 # Convert to per second rate
     
-    def infiltration(groundWaterHeight, Ks, land_c, porosity):
+    def infiltration(dem, groundWaterHeight, Ks, land_c, porosity):
         if configuration.includeInfiltration:
             pot_infiltration = get.calculate_infiltration(Ks, land_c)
-            pot_infiltration = lfr.where((groundWaterHeight - configuration.imperviousLayer)*porosity < pot_infiltration, \
-                                          (configuration.imperviousLayer - groundWaterHeight)*porosity, pot_infiltration)
+            pot_infiltration = lfr.where((dem - groundWaterHeight)*porosity < pot_infiltration, \
+                                          (dem - groundWaterHeight)*porosity, pot_infiltration)
         else:
             pot_infiltration = gen.lue_zero()
         return pot_infiltration

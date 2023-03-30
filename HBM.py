@@ -52,8 +52,8 @@ class mainModel():
         
         # Load initial values for waterheight
         self.iniSurfaceWaterHeight  = lfr.where(self.dem < config.initialWaterTable, config.initialWaterTable - self.dem, 0)
-        self.iniGroundWaterStorage  = dG.generate.lue_one()*(config.imperviousLayer - config.waterBelowDEM)             # The height between the impervious bottom layer and the top of the groundwater table is the amount of water stored.
-        self.iniGroundWaterHeight   = lfr.where(self.dem < 22.6, self.dem - config.waterBelowDEM, 22.5 + (self.dem - 22.6) * 0.5)
+        self.iniGroundWaterHeight   = lfr.where(self.dem < config.imperviousLayer, self.dem - config.waterBelowDEM, config.imperviousLayer + ((self.dem - config.imperviousLayer)/2))
+        self.iniGroundWaterStorage  = self.iniGroundWaterHeight - config.imperviousLayer             # The height between the impervious bottom layer and the top of the groundwater table is the amount of water stored.
         #self.iniGroundWaterHeight = lfr.from_gdal(config.path + f'/data/HupselOutput/1_groundWaterHeight_2023-02-24_80.tiff', config.partitionShape)
         #self.iniDischarge         = dG.generate.lue_zero()
         self.iniDischarge         = lfr.from_gdal(config.path + f'/data/HupselOutput/1_discharge_2023-02-24_80.tiff', config.partitionShape) / 60 # Initial discharge through cell is zero (is speed of the water column in m/s)
@@ -61,6 +61,7 @@ class mainModel():
         # Reporting
         # variables       = {"iniSurfaceWaterHeight": self.iniSurfaceWaterHeight, "iniGroundWaterHeight": self.iniGroundWaterHeight}
         # reporting.report.v2(config.startDate, 0, variables, config.output_path)
+        
 
 
     @lfr.runtime_scope
@@ -71,7 +72,7 @@ class mainModel():
         surfaceWaterHeight = self.iniSurfaceWaterHeight
         groundWaterHeight  = self.iniGroundWaterHeight
         discharge          = self.iniDischarge
-        Sgw                = self.iniGroundWaterStorage - config.imperviousLayer                                             # In groundwaterheight in meters (not accounting for porosity)
+        Sgw                = self.iniGroundWaterStorage                                         # In groundwaterheight in meters (not accounting for porosity)
         
         interceptionStorageMax = dA.get.interceptionStorageMax(landUse=self.landUse)
         interceptionStorage    = dG.generate.lue_zero()
@@ -79,12 +80,12 @@ class mainModel():
         for i in range(int((config.endDate - config.startDate).days * dT)):
             # Timing and date
             currentDate = config.startDate + datetime.timedelta(seconds = i * dt * config.timestep)                # The actual date
-            time = int(81+(i * (dt*config.timestep)/60))                                                                # Time in minutes
+            time = int((i * (dt*config.timestep)/60))                                                                # Time in minutes
 
             # Load data
             precipitation     = dA.get.precipitation(currentDate, dA.get.apiSession())      * config.timestep
             ref_evaporation   = dA.get.pot_evaporation(currentDate, dA.get.apiSession())    * config.timestep
-            pot_infiltration  = dA.get.infiltration(Sgw, self.Ks, self.landC, self.porosity)* config.timestep
+            pot_infiltration  = dA.get.infiltration(self.dem, Sgw, self.Ks, self.landC, self.porosity)* config.timestep
             percolation       = dA.get.percolation(self.dem, groundWaterHeight, self.Ks)    * config.timestep
             i_ratio, e_ratio  = dA.get.ieRatio(ref_evaporation, pot_infiltration)
             evaporation, infiltration = dA.get.EvaporationInfiltration(surfaceWaterHeight, ref_evaporation,\

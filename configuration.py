@@ -48,7 +48,7 @@ fluxes    = []
 # Set values
 initialWaterTable = 1.30
 waterBelowDEM     = 0.001
-imperviousLayer   = 2.00
+imperviousLayer   = 23.00
 
 if scenario == "De Hupsel" or scenario == "De Tol":
     arrayExtent     = 5000
