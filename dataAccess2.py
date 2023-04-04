@@ -105,7 +105,6 @@ class get():
         Ks = gen.lue_one() * 0.05
         porosity = gen.lue_one() * 0.35
         scTable = pd.read_csv(dataFile)
-        scTable = pd.read_csv(config.path + f'/data/soil_conversion.csv')
         ID = scTable["ID"]
         KsValue = scTable["Ks"]
         for count, ID in enumerate(ID):
@@ -143,7 +142,7 @@ class get():
                 
         return mannings, permeability, interceptionStorageMax, LAI, throughfallFraction, cropFactor
     
-    def landCharacteristics_old(landUse):
+    def landCharacteristics_old_v2(landUse):
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
         dummy                   = gen.lue_one()
         permeability            = dummy * 0.8
@@ -194,7 +193,40 @@ class get():
                 LAI                     = lfr.where(landUse == i, 0.15, LAI)
                 cropFactor              = lfr.where(landUse == i, 1, cropFactor)
 
-        return mannings, permeability, interceptionStorageMax, LAI, throughfallFraction, cropFactor
+        return mannings, permeability #, interceptionStorageMax, LAI, throughfallFraction, cropFactor
+    
+    def landCharacteristics_old(landUse):
+        # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
+        land_c = gen.lue_one() * 0.8
+        mannings = gen.lue_one() * 0.045
+        soil_c = gen.lue_one() * 0.5
+        for i in config.total:
+            if i in config.concrete:
+                land_c = lfr.where(landUse == i, 0.001, land_c)
+                mannings = lfr.where(landUse == i, 0.015, mannings)
+                soil_c = lfr.where(landUse == i, 0, soil_c)
+                
+            elif i in config.green:                             # Crops are given a multiplier of 1.2 as they also have pore structures \
+                land_c = lfr.where(landUse == i, 1.1, land_c)            # but a different on can be assigned.
+                mannings = lfr.where(landUse == i, 0.035, mannings)
+                soil_c = lfr.where(landUse == i, 1, soil_c)
+                
+            elif i in config.water:                                              # Any type of water is assigned 1, as this should have the saturated hydraulic conductivity \
+                land_c = lfr.where(landUse == i, 1.0, land_c)            # as precipitation value. --> However, these places probably have inflow from groundwater.
+                mannings = lfr.where(landUse == i, 0.030, mannings)
+                soil_c = lfr.where(landUse == i, 0, soil_c)
+            
+            elif i in config.compacted:
+                land_c = lfr.where(landUse == i, 0.7, land_c)
+                mannings = lfr.where(landUse == i, 0.025, mannings)
+                soil_c = lfr.where(landUse == i, 0.5, soil_c)
+                
+            elif i in config.other_road:
+                land_c = lfr.where(landUse == i, 0.3, land_c) 
+                mannings = lfr.where(landUse == i, 0.015, mannings)
+                soil_c = lfr.where(landUse == i, 0.2, soil_c)
+                
+        return land_c, mannings
     
     def precipitation(date, session):
         return gen.lue_one() * 1 / (1000 * 3600) * int(config.includePrecipitation) # Convert to meter / second rate
@@ -238,34 +270,13 @@ class get():
 
         return i_ratio, e_ratio
     
-    def interception(interceptionStorage, interceptionStorageMax, precipitation, landUse):
-        # Im this simplified version the landUse type will be used for the LAI
-        # This should be improved in a future version
-        k = 0.5         # Constant taken from (Brolsma et al., 2010)
-        
-        f = gen.lue_zero()  # If not stated then there are no leafs
-        
-        if config.includeInterception == False:
-            interception = gen.lue_zero()
-        else:
-            for i in config.total:
-                if i in config.green:
-                    f = lfr.where(landUse == i, math.exp(-k * 3), 0)
-            
-            interception = (gen.lue_one() - f) * precipitation        
-            interception = lfr.where(interceptionStorageMax < interceptionStorage + interception, \
-                                    interceptionStorageMax - interceptionStorage, interception)
-                        
+    def interception(interceptionStorage, interceptionStorageMax, precipitation, throughfallFraction):
+        interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception)     
+        interception = lfr.where(interceptionStorageMax < interceptionStorage + interception, \
+                                interceptionStorageMax - interceptionStorage, interception)
+                    
         precipitation = precipitation - interception
         return interception, precipitation
-    
-    def interceptionStorageMax(landUse):
-        LAI = gen.lue_zero()
-        for i in config.total:
-            if i in config.green:
-                LAI = lfr.where(landUse == i, 3, LAI) # Currently everything within the 'green' category has an LAI of 3.
-        interceptionStorageMax = (LAI / 3) / 1000
-        return interceptionStorageMax
     
     def interceptionStorage(interceptionStorageOld, interception, evapotranspiration):
         interceptionStorage = interceptionStorageOld + interception - evapotranspiration
