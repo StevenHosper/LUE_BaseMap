@@ -89,6 +89,10 @@ else:
     
 output_path = path + f'output/{scenario}/'
 
+# Datafiles
+soilData    = path + f'/data/soil_conversion.csv'
+landUseData = path + f'/data/landuse_conversion_v2.csv'
+
 # Create ID variables
 concrete       = [2, 4, 6, 8, 10, 13, 14, 15, 16, 25, 28, 35, 166, 253]
 green          = [40, 41, 42, 43, 44, 112, 157]
