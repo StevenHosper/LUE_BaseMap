@@ -136,11 +136,11 @@ class get():
             mannings                = lfr.where(soilType == ID, manningsFriction[count], mannings)
             permeability            = lfr.where(soilType == ID, permeabilityValue[count], permeability)
             interceptionStorageMax  = lfr.where(soilType == ID, interceptionStorageMaxValue[count], interceptionStorageMax)
-            LAI                     = lfr.where(soilType == ID, LAIValue[count], LAI)
+            # LAI                     = lfr.where(soilType == ID, LAIValue[count], LAI)
             throughfallFraction     = lfr.where(soilType == ID, throughfallFractionValue[count], throughfallFraction)
-            cropFactor              = lfr.where(soilType == ID, cropFactorValue[count], cropFactor)
+            # cropFactor              = lfr.where(soilType == ID, cropFactorValue[count], cropFactor)
                 
-        return mannings, permeability, interceptionStorageMax, LAI, throughfallFraction, cropFactor
+        return mannings, permeability, interceptionStorageMax, throughfallFraction
     
     def landCharacteristics_old_v2(landUse):
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
@@ -193,7 +193,7 @@ class get():
                 LAI                     = lfr.where(landUse == i, 0.15, LAI)
                 cropFactor              = lfr.where(landUse == i, 1, cropFactor)
 
-        return mannings, permeability #, interceptionStorageMax, LAI, throughfallFraction, cropFactor
+        return mannings, permeability, interceptionStorageMax, throughfallFraction
     
     def landCharacteristics_old(landUse):
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
@@ -234,6 +234,20 @@ class get():
     def pot_evaporation(date, session):
         pot_evaporation = gen.lue_one() * 3 / 10 / (1000*3600) # Convert from mm/d to m/h 
         return pot_evaporation * int(config.includeEvaporation)
+    
+    def evapotranspiration(precipitation, pot_evaporation, interception, interceptionStorage):
+        # First water evaporates from anything stored in the interception
+        interceptionEvaporation = lfr.where(interceptionStorage + interception < pot_evaporation, interceptionStorage, pot_evaporation)
+        pot_evaporation         = pot_evaporation - interceptionEvaporation
+        
+        # Then water evaporates from the rain that lands on the surface
+        precipitationEvaporation= lfr.where(precipitation < pot_evaporation, precipitation, pot_evaporation)
+        pot_evaporation         = pot_evaporation - precipitationEvaporation
+        precipitation           = precipitation - precipitationEvaporation
+        
+        # Then anything left is removed from the subsurface through direct evaporation or transpiration from plants
+        surfaceEvaporation      = pot_evaporation                                                                       # Whatever is still left
+        return precipitation, interceptionEvaporation, surfaceEvaporation
     
     def infiltration(dem, groundWaterHeight, Ks, permeability, porosity):
         pot_infiltration = Ks * permeability
