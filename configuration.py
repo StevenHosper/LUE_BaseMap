@@ -11,7 +11,7 @@ import os
 ### GENERAL SETTINGS ###
 network      = False                                                    # use network disk of NS [True] or local disk [False]
 useAPI       = False                                                    # use API functionality to access data
-scenario     = "De Hupsel"                                              # scenarios : ["generated", "De Hupsel", "De Tol", "De Hupsel10", "unitTest"]
+scenario     = "De Hupsel5"                                              # scenarios : ["generated", "De Hupsel", "De Tol", "De Hupsel10", "unitTest"]
 startDate    = datetime.date(year = 2023, month = 2, day = 24)
 endDate      = datetime.date(year = 2023, month = 2, day = 25)
 dt           = 60                                                       # The time difference between reported data in seconds (for v2)
@@ -40,14 +40,10 @@ includeInfiltration  = True
 includeInterception  = True
 includePercolation   = False
 
-# Report
-variables = ['waterheight', 'groundWaterHeight']
-fluxes    = []
-
 # Set values
-initialWaterTable = 1.30
-waterBelowDEM     = 0.001
-imperviousLayer   = 21.50
+waterBelowDEM               = 0.50
+imperviousLayerBelowDEM     = 2.00
+groundwaterBase             = 23.25
 
 if scenario == "De Hupsel" or scenario == "De Tol":
     arrayExtent     = 5000
@@ -61,6 +57,12 @@ elif scenario == "generated":
     arrayShape      = 2 * (arrayExtent,)
     partitionShape  = 2 * (partitionExtent,)
     resolution       = 1
+elif scenario == "De Hupsel5":
+    arrayExtent     = 1000
+    partitionExtent = 1000
+    arrayShape      = 2 * (arrayExtent,)
+    partitionShape  = 2 * (partitionExtent,)
+    resolution      = 5
 elif scenario == "De Hupsel10":
     arrayExtent     = 2000
     partitionExtent = 1000

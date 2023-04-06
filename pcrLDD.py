@@ -11,7 +11,7 @@ print("Starting")
 # LDD CREATION
 # Attempt with pcraster to make ldd
 pcr.setclone(config.arrayExtent, config.arrayExtent, config.resolution, 0, 0)
-ds = gdal.Open(config.path + f'/data/{config.scenario}/demFixed2.tiff')
+ds = gdal.Open(config.path + f'/data/{config.scenario}/dem_shaped.tiff')
 print(ds)
 raster = ds.GetRasterBand(1)
 a = raster.ReadAsArray()

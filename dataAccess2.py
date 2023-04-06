@@ -228,14 +228,14 @@ class get():
                 
         return land_c, mannings
     
-    def precipitation(date, session):
-        return gen.lue_one() * 1 / (1000 * 3600) * int(config.includePrecipitation) # Convert to meter / second rate
+    def precipitation(date, cellArea, session):
+        return gen.lue_one() * 0 / (1000 * 3600) * int(config.includePrecipitation) * cellArea # Convert to meter / second rate
     
-    def pot_evaporation(date, session):
+    def pot_evaporation(date, cellArea, session):
         pot_evaporation = gen.lue_one() * 3 / 10 / (1000*3600) # Convert from mm/d to m/h 
-        return pot_evaporation * int(config.includeEvaporation)
+        return pot_evaporation * int(config.includeEvaporation) * cellArea
     
-    def evapotranspiration(precipitation, pot_evaporation, interception, interceptionStorage):
+    def evapotranspiration(cellArea, precipitation, pot_evaporation, interception, interceptionStorage):
         # First water evaporates from anything stored in the interception
         interceptionEvaporation = lfr.where(interceptionStorage + interception < pot_evaporation, interceptionStorage, pot_evaporation)
         pot_evaporation         = pot_evaporation - interceptionEvaporation
@@ -249,11 +249,11 @@ class get():
         surfaceEvaporation      = pot_evaporation                                                                       # Whatever is still left
         return precipitation, interceptionEvaporation, surfaceEvaporation
     
-    def infiltration(dem, groundWaterHeight, Ks, permeability, porosity):
+    def infiltration(dem, cellArea, groundWaterHeight, Ks, permeability, porosity):
         pot_infiltration = Ks * permeability
         pot_infiltration = lfr.where((dem - groundWaterHeight)*porosity < pot_infiltration, \
                                         (dem - groundWaterHeight)*porosity, pot_infiltration)
-        return pot_infiltration * int(config.includeInfiltration)
+        return pot_infiltration * int(config.includeInfiltration) * cellArea
     
     def EvaporationInfiltration(precipitation, surfaceWaterHeight, pot_evaporation, pot_infiltration, e_ratio, i_ratio):
          # Check if the waterheight is more than the evaporation and infiltration combined
@@ -267,13 +267,13 @@ class get():
         
         return evaporation, infiltration
     
-    def percolation(dem, groundWaterHeight, Ks):
+    def percolation(dem, cellArea, groundWaterHeight, Ks):
         part = (groundWaterHeight-0.5*dem)/dem
         part = lfr.where(part <= 0, gen.lue_zero(), part)
         percolation = lfr.where(dem < 0, gen.lue_zero(), \
                                 Ks * part)                                                # If the dem is negative, there is no percolation
         percolation = lfr.where(percolation < 0, gen.lue_zero(), percolation) / 100                       # If the percolation is negative, there is no percolation
-        return percolation * int(config.includePercolation)
+        return percolation * int(config.includePercolation) * cellArea
     
     def ieRatio(pot_evaporation, pot_infiltration):
         try:
@@ -284,8 +284,8 @@ class get():
 
         return i_ratio, e_ratio
     
-    def interception(interceptionStorage, interceptionStorageMax, precipitation, throughfallFraction):
-        interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception)     
+    def interception(cellArea, interceptionStorage, interceptionStorageMax, precipitation, throughfallFraction):
+        interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception) * cellArea    
         interception = lfr.where(interceptionStorageMax < interceptionStorage + interception, \
                                 interceptionStorageMax - interceptionStorage, interception)
                     
