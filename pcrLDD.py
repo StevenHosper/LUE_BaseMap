@@ -11,15 +11,15 @@ print("Starting")
 # LDD CREATION
 # Attempt with pcraster to make ldd
 pcr.setclone(config.arrayExtent, config.arrayExtent, config.resolution, 0, 0)
-ds = gdal.Open(config.path + f'/data/{config.scenario}/dem_shaped.tiff')
+ds = gdal.Open(config.path + f'/data/{config.scenario}/dem.tiff')
 print(ds)
 raster = ds.GetRasterBand(1)
 a = raster.ReadAsArray()
 
-result = pcr.numpy2pcr(pcr.Scalar, a, -10000)
+result = pcr.numpy2pcr(pcr.Scalar, a, 3.40282e+38)
 print(result)
 print("Starting the LDD create proces")
-ldd = pcr.lddcreate(result, 9999999, 500, 9999999, 9999999)
+ldd = pcr.lddcreate(result, 9999999, 50000, 9999999, 9999999)
 print(ldd)
 pcr.report(ldd, config.path + f'/data/{config.scenario}/ldd_pcr_shaped.tiff')
 
