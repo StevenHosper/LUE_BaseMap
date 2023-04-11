@@ -57,15 +57,15 @@ class mainModel():
         self.iniSurfaceWaterHeight  = dG.generate.lue_zero()
         
         # iniGroundWaterHeight generated
-        self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundwaterBase + config.waterBelowDEM, self.dem - config.waterBelowDEM, self.groundwaterBase)
-        self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
+        #self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundwaterBase + config.waterBelowDEM, self.dem - config.waterBelowDEM, self.groundwaterBase)
+        #self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
         
         # iniGroundWaterHeight from memory
-        # self.iniGroundWaterHeight   = lfr.from_gdal(config.path + f'/data/{config.scenario}/1_groundWaterHeight_2023-02-24_10hours.tiff', config.partitionShape)
+        self.iniGroundWaterHeight   = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_groundWaterHeight_2023-02-24_299.tiff', config.partitionShape)
         
         self.iniGroundWaterStorage  = self.iniGroundWaterHeight - (self.dem - config.imperviousLayerBelowDEM)
-        #self.iniDischarge           = lfr.from_gdal(config.path + f'/data/{config.scenario}/1_discharge_2023-02-24_10hours.tiff', config.partitionShape) / 5 # Initial discharge through cell is zero (is speed of the water column in m/s)
-        self.iniDischarge           = dG.generate.lue_zero()
+        self.iniDischarge           = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_discharge_2023-02-24_299.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
+        #self.iniDischarge           = dG.generate.lue_zero()
         # self.notBoundaryCells       = dG.generate.boundaryCell() # Currently not working
         self.resolution             = config.resolution * dG.generate.lue_one()
         self.cellArea               = self.resolution * self.resolution

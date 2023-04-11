@@ -37,11 +37,11 @@ demAPI    = "a60ad336-c95b-4fb6-b852-96fc352ee808"
 includePrecipitation = True
 includeEvaporation   = True
 includeInfiltration  = True
-includeInterception  = False
+includeInterception  = True
 includePercolation   = False
 
 # Set values
-waterBelowDEM               = 1.0
+waterBelowDEM               = 0.5
 imperviousLayerBelowDEM     = 2.00
 groundwaterBase             = 23.25
 
