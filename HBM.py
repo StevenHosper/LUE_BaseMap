@@ -85,9 +85,7 @@ class mainModel():
         interceptionStorage = dG.generate.lue_zero()
         
         date = config.startDate
-        
-        Qmax = []
-        
+
         # Static, really small value because inflow = 0 is not accepted
         inflow = dG.generate.lue_one()*0.000000000001
         with open(config.output_path + "maximumDischarge.csv", "w", newline="") as f:
@@ -98,7 +96,7 @@ class mainModel():
                 # Load values
                 precipitation               = dA.get.precipitation(date, self.cellArea, dA.get.apiSession())
                 ref_evaporation             = dA.get.pot_evaporation(date, self.cellArea, dA.get.apiSession())
-                interceptionStorage, interception, precipitation, evapotranspirationSurface = \
+                interceptionStorage, precipitation, evapotranspirationSurface = \
                                               dA.get.interception(self.cellArea, interceptionStorage, self.interceptionStorageMax, precipitation, \
                                                                   ref_evaporation, self.throughfallFraction)
                 pot_infiltration            = dA.get.infiltration(self.dem, self.cellArea, groundWaterHeight, self.Ks, self.permeability, self.porosity)
