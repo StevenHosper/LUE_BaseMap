@@ -99,7 +99,9 @@ class mainModel():
                 interceptionStorage, precipitation, evapotranspirationSurface = \
                                               dA.get.interception(self.cellArea, interceptionStorage, self.interceptionStorageMax, precipitation, \
                                                                   ref_evaporation, self.throughfallFraction)
-                pot_infiltration            = dA.get.infiltration(self.dem, self.cellArea, groundWaterHeight, self.Ks, self.permeability, self.porosity)
+                evapotranspirationSurface, evapotranspirationSoil = \
+                                              dA.get.evapotranspiration(precipitation, evapotranspirationSurface, discharge)
+                pot_infiltration            = dA.get.pot_infiltration(self.dem, self.cellArea, groundWaterHeight, self.Ks, self.permeability, self.porosity)
                 i_ratio, e_ratio            = dA.get.ieRatio(ref_evaporation, pot_infiltration)
                 evaporation, infiltration   = dA.get.EvaporationInfiltration(precipitation, surfaceWaterHeight, ref_evaporation, pot_infiltration, e_ratio, i_ratio)
                 
