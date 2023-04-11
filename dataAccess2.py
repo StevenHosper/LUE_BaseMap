@@ -232,8 +232,22 @@ class get():
         return gen.lue_one() * 0 / (1000 * 3600) * int(config.includePrecipitation) * cellArea # Convert to meter / second rate
     
     def pot_evaporation(date, cellArea, session):
-        pot_evaporation = gen.lue_one() * 3 / 10 / (1000*3600) # Convert from mm/d to m/h 
+        pot_evaporation = gen.lue_one() * 3 / 10 / (1000*3600) # Convert from mm/d to m/s 
         return pot_evaporation * int(config.includeEvaporation) * cellArea
+    
+    def interception(cellArea, interceptionStorage, interceptionStorageMax, precipitation, ref_evaporation, throughfallFraction):
+        interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception) * cellArea    
+        interception = lfr.where(interceptionStorageMax < interceptionStorage + interception, \
+                                interceptionStorageMax - interceptionStorage, interception)
+        precipitation = precipitation - interception
+        enoughWater = (interception + interceptionStorage/config.dt) > ref_evaporation
+        interceptionStorage = lfr.where(enoughWater, interceptionStorage + interception - ref_evaporation, 0)
+        evapotranspirationSurface = lfr.where(enoughWater, 0, ref_evaporation - interception - interceptionStorage/config.dt)
+        return interceptionStorage, precipitation, evapotranspirationSurface
+    
+    def interceptionStorage(interceptionStorageOld, interception, evapotranspiration):
+        interceptionStorage = interceptionStorageOld + interception - evapotranspiration
+        return interceptionStorage
     
     def evapotranspiration(cellArea, precipitation, pot_evaporation, interception, interceptionStorage):
         # First water evaporates from anything stored in the interception
@@ -276,25 +290,12 @@ class get():
         return percolation * int(config.includePercolation) * cellArea
     
     def ieRatio(pot_evaporation, pot_infiltration):
-        try:
-            i_ratio = pot_infiltration / (pot_evaporation + pot_infiltration)
-            e_ratio = pot_evaporation / (pot_evaporation + pot_infiltration)
-        except ZeroDivisionError:
-            i_ratio, e_ratio = gen.lue_zero()
+        ie = pot_evaporation + pot_infiltration
+        
+        i_ratio = lfr.where(ie > 0, pot_infiltration / ie, 0)
+        e_ratio = lfr.where(ie > 0, pot_evaporation / ie, 0)
 
         return i_ratio, e_ratio
-    
-    def interception(cellArea, interceptionStorage, interceptionStorageMax, precipitation, throughfallFraction):
-        interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception) * cellArea    
-        interception = lfr.where(interceptionStorageMax < interceptionStorage + interception, \
-                                interceptionStorageMax - interceptionStorage, interception)
-                    
-        precipitation = precipitation - interception
-        return interception, precipitation
-    
-    def interceptionStorage(interceptionStorageOld, interception, evapotranspiration):
-        interceptionStorage = interceptionStorageOld + interception - evapotranspiration
-        return interceptionStorage
     
     def groundFlow():
         pass
