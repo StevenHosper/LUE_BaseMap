@@ -41,7 +41,7 @@ includeInterception  = False
 includePercolation   = False
 
 # Set values
-waterBelowDEM               = 0.5
+waterBelowDEM               = 1.0
 imperviousLayerBelowDEM     = 2.00
 groundwaterBase             = 23.25
 

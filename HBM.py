@@ -101,9 +101,9 @@ class mainModel():
                                                                   ref_evaporation, self.throughfallFraction)
                 evapotranspirationSurface, evapotranspirationSoil = \
                                               dA.get.evapotranspiration(precipitation, evapotranspirationSurface, discharge)
-                pot_infiltration            = dA.get.pot_infiltration(self.dem, self.cellArea, groundWaterHeight, self.Ks, self.permeability, self.porosity)
-                i_ratio, e_ratio            = dA.get.ieRatio(ref_evaporation, pot_infiltration)
-                evaporation, infiltration   = dA.get.EvaporationInfiltration(precipitation, surfaceWaterHeight, ref_evaporation, pot_infiltration, e_ratio, i_ratio)
+                infiltration                = dA.get.pot_infiltration(Sgw, MaxSgw, self.cellArea, self.Ks, self.permeability, self.porosity, \
+                                                                      discharge, precipitation, evapotranspirationSurface)
+
                 
                 # Groundwater hydraulic gradients and corresponding discharge
                 gwLDD       = lfr.d8_flow_direction(groundWaterHeight)
@@ -111,9 +111,9 @@ class mainModel():
                 Qgw         = Sgw * self.Ks * gwGradient * config.timestep * self.cellArea               # Groundwater velocity in m/s
                 
                 for j in range(dt):
-                    Sgw         = Sgw + (infiltration * self.porosity) + lfr.upstream(gwLDD, Qgw) - Qgw
+                    Sgw         = Sgw + ((infiltration - evapotranspirationSoil)/ self.porosity) + lfr.upstream(gwLDD, Qgw) - Qgw
                     seepage     = lfr.where(Sgw > MaxSgw, (Sgw - MaxSgw)*self.porosity, 0)
-                    discharge   = discharge + precipitation - evaporation - infiltration + seepage
+                    discharge   = discharge + precipitation - evapotranspirationSurface - infiltration + seepage
                     discharge   = lfr.where(discharge < 0.000000000001, 0.000000000001, discharge)
                     
                     # Kinematic Surface Water Routing 

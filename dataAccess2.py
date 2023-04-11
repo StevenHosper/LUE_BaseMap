@@ -245,11 +245,13 @@ class get():
         evapotranspirationSurface = lfr.where(enoughWater, 0, ref_evaporation - interception - interceptionStorage/config.dt)
         return interceptionStorage, precipitation, evapotranspirationSurface
     
-    def pot_infiltration(dem, cellArea, groundWaterHeight, Ks, permeability, porosity):
-        pot_infiltration = Ks * permeability
-        pot_infiltration = lfr.where((dem - groundWaterHeight)*porosity < pot_infiltration, \
-                                        (dem - groundWaterHeight)*porosity, pot_infiltration)
-        return pot_infiltration * int(config.includeInfiltration) * cellArea
+    def pot_infiltration(Sgw, MaxSgw, cellArea, Ks, permeability, porosity, discharge, precipitation, evapotranspirationSurface):
+        pot_infiltration = Ks * permeability * int(config.includeInfiltration)
+        pot_infiltration = lfr.where((MaxSgw - Sgw)*porosity < pot_infiltration, \
+                                        (MaxSgw - Sgw)*porosity, pot_infiltration)
+        enoughWater      = discharge/config.dt + precipitation - evapotranspirationSurface > pot_infiltration
+        infiltration = lfr.where(enoughWater, pot_infiltration, discharge/config.dt + precipitation - evapotranspirationSurface)
+        return infiltration * cellArea
     
     def evapotranspiration(precipitation, evapotranspirationSurface, discharge):
         enoughWater = (precipitation + discharge/config.dt) > evapotranspirationSurface
