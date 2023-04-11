@@ -11,12 +11,12 @@ import os
 ### GENERAL SETTINGS ###
 network      = False                                                    # use network disk of NS [True] or local disk [False]
 useAPI       = False                                                    # use API functionality to access data
-scenario     = "De Hupsel5"                                              # scenarios : ["generated", "De Hupsel", "De Tol", "De Hupsel10", "unitTest"]
+scenario     = "De Hupsel5"                                             # scenarios : ["generated", "De Hupsel", "De Tol", "De Hupsel10", "unitTest"]
 startDate    = datetime.date(year = 2023, month = 2, day = 24)
 endDate      = datetime.date(year = 2023, month = 2, day = 25)
 dt           = 60                                                       # The time difference between reported data in seconds (for v2)
 timestep     = 1
-dT           = 60                                                        # The times new data will be loaded in.
+dT           = 300                                                      # The times new data will be loaded in.
 v2 = True
 unitTest = False
 
@@ -37,11 +37,11 @@ demAPI    = "a60ad336-c95b-4fb6-b852-96fc352ee808"
 includePrecipitation = True
 includeEvaporation   = True
 includeInfiltration  = True
-includeInterception  = True
+includeInterception  = False
 includePercolation   = False
 
 # Set values
-waterBelowDEM               = 0.50
+waterBelowDEM               = 0.5
 imperviousLayerBelowDEM     = 2.00
 groundwaterBase             = 23.25
 
