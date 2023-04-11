@@ -241,7 +241,7 @@ class get():
                                 interceptionStorageMax - interceptionStorage, interception)
         precipitation = precipitation - interception
         enoughWater = (interception + interceptionStorage/config.dt) > ref_evaporation
-        interceptionStorage = lfr.where(enoughWater, interceptionStorage + interception - ref_evaporation, 0)
+        interceptionStorage = lfr.where(enoughWater, interceptionStorage + interception*config.dt - ref_evaporation*config.dt, 0)
         evapotranspirationSurface = lfr.where(enoughWater, 0, ref_evaporation - interception - interceptionStorage/config.dt)
         return interceptionStorage, precipitation, evapotranspirationSurface
     
