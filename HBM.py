@@ -41,7 +41,7 @@ class mainModel():
     def __init__(self):
         # Initialize data required from memory files
         # Get all constants
-        self.dem        = lfr.from_gdal(config.path + f'/data/{config.scenario}/dem3.tif', config.partitionShape)               # DEM map of the study area
+        self.dem        = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/dem.tiff', config.partitionShape)               # DEM map of the study area
         self.dem        = lfr.where(self.dem < 0.1, 35, self.dem)
         self.landUse    = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)       # Land-use, example: road
         soilType        = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)             # example: sand or clay
@@ -62,7 +62,7 @@ class mainModel():
         
         # iniGroundWaterHeight from memory
         self.iniGroundWaterHeight   = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_groundWaterHeight_2023-02-24_299.tiff', config.partitionShape)
-        
+        self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - config.waterBelowDEM, self.iniGroundWaterHeight)
         self.iniGroundWaterStorage  = self.iniGroundWaterHeight - (self.dem - config.imperviousLayerBelowDEM)
         self.iniDischarge           = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_discharge_2023-02-24_299.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
         #self.iniDischarge           = dG.generate.lue_zero()
@@ -85,6 +85,12 @@ class mainModel():
         interceptionStorage = dG.generate.lue_zero()
         
         date = config.startDate
+        
+        # Kinematic Surface Water Routing Constants
+        alpha               = 1.5
+        beta                = 0.6
+        channelLength       = self.resolution
+        timestepduration    = 1.0 * config.timestep
 
         # Static, really small value because inflow = 0 is not accepted
         inflow = dG.generate.lue_one()*0.000000000001
@@ -110,17 +116,14 @@ class mainModel():
                 gwGradient  = (groundWaterHeight - lfr.downstream(gwLDD, groundWaterHeight)) / self.resolution
                 Qgw         = Sgw * self.Ks * gwGradient * config.timestep * self.cellArea               # Groundwater velocity in m/s
                 
+                gwFlux      = ((infiltration - evapotranspirationSoil)/self.porosity) + lfr.upstream(gwLDD, Qgw) - Qgw
+                swFlux      = precipitation - evapotranspirationSurface - infiltration
+                
                 for j in range(dt):
-                    Sgw         = Sgw + ((infiltration - evapotranspirationSoil)/ self.porosity) + lfr.upstream(gwLDD, Qgw) - Qgw
+                    Sgw         = Sgw + gwFlux                                                                     
                     seepage     = lfr.where(Sgw > MaxSgw, (Sgw - MaxSgw)*self.porosity, 0)
-                    discharge   = discharge + precipitation - evapotranspirationSurface - infiltration + seepage
+                    discharge   = discharge + swFlux + seepage
                     discharge   = lfr.where(discharge < 0.000000000001, 0.000000000001, discharge)
-                    
-                    # Kinematic Surface Water Routing 
-                    alpha               = 1.5
-                    beta                = 0.6
-                    channelLength       = self.resolution
-                    timestepduration    = 1.0 * config.timestep
                     discharge           = lfr.kinematic_wave(self.ldd, discharge, inflow,\
                                                 alpha, beta, timestepduration,\
                                                 channelLength,)
@@ -137,7 +140,8 @@ class mainModel():
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
                 
-                variables = {"discharge": discharge, "groundWaterHeight": groundWaterHeight, "Sgw": Sgw, "Qgw": Qgw}
+                variables = {"discharge": discharge, "infiltration": infiltration, "evapotranspirationSoil": evapotranspirationSoil,\
+                             "groundWaterHeight": groundWaterHeight, "Sgw": Sgw, "Qgw": Qgw, "seepage": seepage}
                 reporting.report.v2(date, time, variables, config.output_path)
         
         return 0
