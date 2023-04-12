@@ -43,10 +43,10 @@ class mainModel():
         # Get all constants
         self.dem        = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/dem.tiff', config.partitionShape)               # DEM map of the study area
         self.dem        = lfr.where(self.dem < 0.1, 35, self.dem)
-        self.landUse    = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)       # Land-use, example: road
+        landUse    = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)       # Land-use, example: road
         soilType        = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)             # example: sand or clay
         self.Ks, self.porosity    = dA.get.soil_csv(config.soilData, soilType)                                                  # soil characteristic
-        self.mannings, self.permeability, self.interceptionStorageMax, self.throughfallFraction = dA.get.landCharacteristics_csv(config.landUseData, soilType)            # land-use characteristics
+        self.mannings, self.permeability, self.interceptionStorageMax, self.throughfallFraction = dA.get.landCharacteristics_csv(config.landUseData, landUse)            # land-use characteristics
         
         self.groundwaterBase         = config.groundwaterBase
         
@@ -101,8 +101,8 @@ class mainModel():
                 time = int((i * (dt*config.timestep)/60)) 
                 
                 # Load flux and storage values
-                precipitation               = dA.get.precipitation(time, self.cellArea, dA.get.apiSession())
-                ref_evaporation             = dA.get.pot_evaporation(date, self.cellArea, dA.get.apiSession())
+                precipitation               = dA.get.precipitation(time, self.cellArea, dA.get.apiSession()) # m/s
+                ref_evaporation             = dA.get.pot_evaporation(date, self.cellArea, dA.get.apiSession()) # m/s
                 interceptionStorage, precipitation, evapotranspirationSurface = \
                                               dA.get.interception(self.cellArea, interceptionStorage, self.interceptionStorageMax, precipitation, \
                                                                   ref_evaporation, self.throughfallFraction)
@@ -111,7 +111,7 @@ class mainModel():
                 infiltration                = dA.get.pot_infiltration(Sgw, MaxSgw, self.cellArea, self.Ks, self.permeability, self.porosity, \
                                                                       discharge, precipitation, evapotranspirationSurface)
 
-                
+
                 # Groundwater LDD, gradient and flow flux
                 gwLDD       = lfr.d8_flow_direction(groundWaterHeight)
                 gwGradient  = (groundWaterHeight - lfr.downstream(gwLDD, groundWaterHeight)) / self.resolution
@@ -158,7 +158,8 @@ class mainModel():
                 
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
-                variables = {"discharge": discharge, "groundWaterHeight": groundWaterHeight}
+                variables = {"discharge": discharge, "groundWaterHeight": groundWaterHeight, "infiltration": infiltration, "Qgw": Qgw, "seepage": seepage, "swFlux": swFlux, "gwFlux": gwFlux,
+                             "interceptionStorage": interceptionStorage, "throughfallFraction": self.throughfallFraction, "precipitation": precipitation, "evapotranspirationSurface": evapotranspirationSurface}
                 reporting.report.v2(date, time, variables, config.output_path)
         return 0
 

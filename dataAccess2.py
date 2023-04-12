@@ -112,7 +112,7 @@ class get():
             
         return (Ks / 86400), porosity
     
-    def landCharacteristics_csv(dataFile, soilType):
+    def landCharacteristics_csv(dataFile, landUse):
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
         # Standard values
         dummy                  = gen.lue_one()
@@ -133,11 +133,11 @@ class get():
         cropFactorValue             = data["Crop_type"]
         
         for count, ID in enumerate(ID):
-            mannings                = lfr.where(soilType == ID, manningsFriction[count], mannings)
-            permeability            = lfr.where(soilType == ID, permeabilityValue[count], permeability)
-            interceptionStorageMax  = lfr.where(soilType == ID, interceptionStorageMaxValue[count], interceptionStorageMax)
+            mannings                = lfr.where(landUse == ID, manningsFriction[count], mannings)
+            permeability            = lfr.where(landUse == ID, permeabilityValue[count], permeability)
+            interceptionStorageMax  = lfr.where(landUse == ID, interceptionStorageMaxValue[count], interceptionStorageMax)
             # LAI                     = lfr.where(soilType == ID, LAIValue[count], LAI)
-            throughfallFraction     = lfr.where(soilType == ID, throughfallFractionValue[count], throughfallFraction)
+            throughfallFraction     = lfr.where(landUse == ID, throughfallFractionValue[count], throughfallFraction)
             # cropFactor              = lfr.where(soilType == ID, cropFactorValue[count], cropFactor)
                 
         return mannings, permeability, interceptionStorageMax, throughfallFraction
@@ -229,35 +229,35 @@ class get():
         return land_c, mannings
     
     def precipitation(date, cellArea, session):
-        rain = 90 > date > 60
-        return gen.lue_one() * 1 / (1000 * 3600) * int(config.includePrecipitation) * cellArea * int(rain) # Convert to meter / second rate
+        rain = 30 > date > 15 or 60 > date > 45
+        return gen.lue_one() * 1 / (1000 * 3600) * int(config.includePrecipitation) * cellArea * int(rain) # Convert to m/s rate
     
     def pot_evaporation(date, cellArea, session):
         pot_evaporation = gen.lue_one() * 3 / 10 / (1000*3600) # Convert from mm/d to m/s 
         return pot_evaporation * int(config.includeEvaporation) * cellArea
     
     def interception(cellArea, interceptionStorage, interceptionStorageMax, precipitation, ref_evaporation, throughfallFraction):
-        interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception) * cellArea    
-        interception = lfr.where(interceptionStorageMax < interceptionStorage + interception, \
-                                interceptionStorageMax - interceptionStorage, interception)
+        interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception)  
+        interception = lfr.where(interceptionStorageMax < interceptionStorage + interception * config.dt, \
+                                (interceptionStorageMax - interceptionStorage)/config.dt, interception)
         precipitation = precipitation - interception
-        enoughWater = (interception + interceptionStorage/config.dt) > ref_evaporation
-        interceptionStorage = lfr.where(enoughWater, interceptionStorage + interception*config.dt - ref_evaporation*config.dt, 0)
-        evapotranspirationSurface = lfr.where(enoughWater, 0, ref_evaporation - interception - interceptionStorage/config.dt)
+        enoughWaterInt = (interception + interceptionStorage/config.dt) > ref_evaporation
+        interceptionStorage = lfr.where(enoughWaterInt, interceptionStorage + interception*config.dt - ref_evaporation*config.dt, 0)
+        evapotranspirationSurface = lfr.where(enoughWaterInt, 0, ref_evaporation - (interception + interceptionStorage/config.dt))
         return interceptionStorage, precipitation, evapotranspirationSurface
     
     def pot_infiltration(Sgw, MaxSgw, cellArea, Ks, permeability, porosity, discharge, precipitation, evapotranspirationSurface):
         pot_infiltration = Ks * permeability * int(config.includeInfiltration)
         pot_infiltration = lfr.where((MaxSgw - Sgw)*porosity < pot_infiltration, \
                                         (MaxSgw - Sgw)*porosity, pot_infiltration)
-        enoughWater      = discharge/config.dt + precipitation - evapotranspirationSurface > pot_infiltration
-        infiltration = lfr.where(enoughWater, pot_infiltration, discharge/config.dt + precipitation - evapotranspirationSurface)
+        enoughWaterInf   = discharge/config.dt + precipitation - evapotranspirationSurface > pot_infiltration
+        infiltration     = lfr.where(enoughWaterInf, pot_infiltration, discharge/config.dt + precipitation - evapotranspirationSurface)
         return infiltration * cellArea
     
     def evapotranspiration(precipitation, evapotranspirationSurface, discharge):
-        enoughWater = (precipitation + discharge/config.dt) > evapotranspirationSurface
-        evapotranspirationSoil = lfr.where(enoughWater, 0, evapotranspirationSurface - (precipitation + discharge/config.dt))
-        evapotranspirationSurface = lfr.where(enoughWater, evapotranspirationSurface, precipitation + discharge/config.dt)
+        enoughWaterE = (precipitation + discharge/config.dt) > evapotranspirationSurface
+        evapotranspirationSoil = lfr.where(enoughWaterE, 0, evapotranspirationSurface - (precipitation + discharge/config.dt))
+        evapotranspirationSurface = lfr.where(enoughWaterE, evapotranspirationSurface, precipitation + discharge/config.dt)
         
         return evapotranspirationSurface, evapotranspirationSoil
         
