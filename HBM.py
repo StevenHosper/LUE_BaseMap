@@ -53,9 +53,6 @@ class mainModel():
         # self.ldd = lfr.d8_flow_direction(self.dem)
         self.ldd        = lfr.from_gdal(config.path + f'/data/{config.scenario}/ldd_pcr_shaped.tiff', config.partitionShape)
         
-        # Load initial values for waterheight
-        self.iniSurfaceWaterHeight  = dG.generate.lue_zero()
-        
         # iniGroundWaterHeight generated
         #self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundwaterBase + config.waterBelowDEM, self.dem - config.waterBelowDEM, self.groundwaterBase)
         #self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
@@ -77,7 +74,6 @@ class mainModel():
         dt = config.dt              # Amount of small timesteps for routing in seconds
         dT = config.dT              # Amount of large timesteps for loading and saving data
         
-        surfaceWaterHeight  = self.iniSurfaceWaterHeight
         groundWaterHeight   = self.iniGroundWaterHeight
         discharge           = self.iniDischarge
         Sgw                 = self.iniGroundWaterStorage
@@ -94,12 +90,17 @@ class mainModel():
 
         # Static, really small value because inflow = 0 is not accepted
         inflow = dG.generate.lue_one()*0.000000000001
+        
+        # Open file to write maximum discharge values to for post simulation validation.
         with open(config.output_path + "maximumDischarge.csv", "w", newline="") as f:
             writer = csv.writer(f, delimiter=';')
+            
+            # Start model for dT large periods
             for i in range(dT):
+                # Time in minutes is the small iteration multiplied with the timestep (both in seconds) divided by 60 seconds.
                 time = int((i * (dt*config.timestep)/60)) 
                 
-                # Load values
+                # Load flux and storage values
                 precipitation               = dA.get.precipitation(date, self.cellArea, dA.get.apiSession())
                 ref_evaporation             = dA.get.pot_evaporation(date, self.cellArea, dA.get.apiSession())
                 interceptionStorage, precipitation, evapotranspirationSurface = \
@@ -111,39 +112,55 @@ class mainModel():
                                                                       discharge, precipitation, evapotranspirationSurface)
 
                 
-                # Groundwater hydraulic gradients and corresponding discharge
+                # Groundwater LDD, gradient and flow flux
                 gwLDD       = lfr.d8_flow_direction(groundWaterHeight)
                 gwGradient  = (groundWaterHeight - lfr.downstream(gwLDD, groundWaterHeight)) / self.resolution
                 Qgw         = Sgw * self.Ks * gwGradient * config.timestep * self.cellArea               # Groundwater velocity in m/s
                 
+                # Add all vertical processes for the surfacewater and all processes groundwater
                 gwFlux      = ((infiltration - evapotranspirationSoil)/self.porosity) + lfr.upstream(gwLDD, Qgw) - Qgw
                 swFlux      = precipitation - evapotranspirationSurface - infiltration
                 
                 for j in range(dt):
+                    # The groundwater is adjusted by the fluxes
                     Sgw         = Sgw + gwFlux                                                                     
+                    
+                    # If the groundwater table surpases the digital elevation map, groundwater is turned into runoff.
                     seepage     = lfr.where(Sgw > MaxSgw, (Sgw - MaxSgw)*self.porosity, 0)
+                    
+                    # Discharge is affected by the surfacewater fluxes, and seepage is added
                     discharge   = discharge + swFlux + seepage
+                    
+                    # Because the kinematic wave has difficulties working with zero's, we have opted for a very small value. This will impact model results.
                     discharge   = lfr.where(discharge < 0.000000000001, 0.000000000001, discharge)
+                    
+                    # Water routing based on the kinematic wave function, currently alpha is a float. Hopefully mannings raster can be used in the future.
                     discharge           = lfr.kinematic_wave(self.ldd, discharge, inflow,\
                                                 alpha, beta, timestepduration,\
                                                 channelLength,)
                     
+                    # Any water that is moved from groundwater to discharge has to be removed from the groundwaterStorage
                     Sgw         = Sgw - (seepage/self.porosity)
                     
+                    # Get the maximum value of the discharge raster (to limit the amount of tasks created by HPX)
                     Qmaxvalue = lfr.maximum(discharge).get()
                     print(Qmaxvalue)
+                    
+                    # Write value to csv for later validation
                     writer.writerow([i*60 + j, Qmaxvalue])
                 
+                # Make sure the storage of water can never be smaller than zero. There cannot be negative storage. Because we do not adjust fluxes every second,
+                # but every 60 seconds it is possible a cell is depleted and becomes slightly negative.
                 Sgw = lfr.where(Sgw <= 0, 0, Sgw)
+                
+                # Adjust the GW Table for the LDD creation of the next timestep.
                 groundWaterHeight = self.dem - config.imperviousLayerBelowDEM + Sgw
                 
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
-                
                 variables = {"discharge": discharge, "infiltration": infiltration, "evapotranspirationSoil": evapotranspirationSoil,\
                              "groundWaterHeight": groundWaterHeight, "Sgw": Sgw, "Qgw": Qgw, "seepage": seepage}
                 reporting.report.v2(date, time, variables, config.output_path)
-        
         return 0
 
 
