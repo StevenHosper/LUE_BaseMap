@@ -247,12 +247,12 @@ class get():
         return interceptionStorage, precipitation, evapotranspirationSurface
     
     def pot_infiltration(Sgw, MaxSgw, cellArea, Ks, permeability, porosity, discharge, precipitation, evapotranspirationSurface):
-        pot_infiltration = Ks * permeability * int(config.includeInfiltration)
+        pot_infiltration = Ks * permeability * int(config.includeInfiltration) # meters that can infiltrate the soil
         pot_infiltration = lfr.where((MaxSgw - Sgw)*porosity < pot_infiltration, \
-                                        (MaxSgw - Sgw)*porosity, pot_infiltration)
-        enoughWaterInf   = discharge/config.dt + precipitation - evapotranspirationSurface > pot_infiltration
-        infiltration     = lfr.where(enoughWaterInf, pot_infiltration, discharge/config.dt + precipitation - evapotranspirationSurface)
-        return infiltration * cellArea
+                                        (MaxSgw - Sgw)*porosity, pot_infiltration) * cellArea   # The amount that can infiltrate because of capacity times the area
+        enoughWaterInf   = discharge/config.dt + precipitation - evapotranspirationSurface > pot_infiltration # If there is more water on the surface available than can infiltrate
+        infiltration     = lfr.where(enoughWaterInf, pot_infiltration, discharge/config.dt + precipitation - evapotranspirationSurface) # Either the pot_infiltration will fully infiltrate
+        return infiltration                                                                                                             # or the available water at the surface will.
     
     def evapotranspiration(precipitation, evapotranspirationSurface, discharge):
         enoughWaterE = (precipitation + discharge/config.dt) > evapotranspirationSurface

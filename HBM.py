@@ -158,8 +158,8 @@ class mainModel():
                 
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
-                variables = {"discharge": discharge, "groundWaterHeight": groundWaterHeight, "infiltration": infiltration, "Qgw": Qgw, "seepage": seepage, "swFlux": swFlux, "gwFlux": gwFlux,
-                             "interceptionStorage": interceptionStorage, "throughfallFraction": self.throughfallFraction, "precipitation": precipitation, "evapotranspirationSurface": evapotranspirationSurface}
+                variables = {"discharge": discharge, "groundWaterHeight": groundWaterHeight, "Sgw": Sgw,
+                             "interceptionStorage": interceptionStorage,}
                 reporting.report.v2(date, time, variables, config.output_path)
         return 0
 
