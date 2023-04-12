@@ -41,7 +41,7 @@ class mainModel():
     def __init__(self):
         # Initialize data required from memory files
         # Get all constants
-        self.dem        = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/dem.tiff', config.partitionShape)               # DEM map of the study area
+        self.dem        = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/demConverted.tiff', config.partitionShape)               # DEM map of the study area
         self.dem        = lfr.where(self.dem < 0.1, 35, self.dem)
         self.landUse    = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)       # Land-use, example: road
         soilType        = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)             # example: sand or clay
@@ -61,7 +61,7 @@ class mainModel():
         self.iniGroundWaterHeight   = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_groundWaterHeight_2023-02-24_299.tiff', config.partitionShape)
         self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - config.waterBelowDEM, self.iniGroundWaterHeight)
         self.iniGroundWaterStorage  = self.iniGroundWaterHeight - (self.dem - config.imperviousLayerBelowDEM)
-        self.iniDischarge           = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_discharge_2023-02-24_299.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
+        self.iniDischarge           = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_discharge_2023-02-24_299.tiff', config.partitionShape) / 5 # Initial discharge through cell is zero (is speed of the water column in m/s)
         #self.iniDischarge           = dG.generate.lue_zero()
         # self.notBoundaryCells       = dG.generate.boundaryCell() # Currently not working
         self.resolution             = config.resolution * dG.generate.lue_one()
@@ -115,7 +115,7 @@ class mainModel():
                 # Groundwater LDD, gradient and flow flux
                 gwLDD       = lfr.d8_flow_direction(groundWaterHeight)
                 gwGradient  = (groundWaterHeight - lfr.downstream(gwLDD, groundWaterHeight)) / self.resolution
-                Qgw         = Sgw * self.Ks * gwGradient * config.timestep * self.cellArea               # Groundwater velocity in m/s
+                Qgw         = Sgw * self.Ks * gwGradient * config.timestep * self.resolution                        # Groundwater velocity in m/s
                 
                 # Add all vertical processes for the surfacewater and all processes groundwater
                 gwFlux      = ((infiltration - evapotranspirationSoil)/self.porosity) + lfr.upstream(gwLDD, Qgw) - Qgw
@@ -158,8 +158,7 @@ class mainModel():
                 
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
-                variables = {"discharge": discharge, "infiltration": infiltration, "evapotranspirationSoil": evapotranspirationSoil,\
-                             "groundWaterHeight": groundWaterHeight, "Sgw": Sgw, "Qgw": Qgw, "seepage": seepage}
+                variables = {"discharge": discharge, "groundWaterHeight": groundWaterHeight}
                 reporting.report.v2(date, time, variables, config.output_path)
         return 0
 
