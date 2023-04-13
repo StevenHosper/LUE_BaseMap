@@ -117,6 +117,9 @@ class mainModel():
                 gwGradient  = (groundWaterHeight - lfr.downstream(gwLDD, groundWaterHeight)) / self.resolution
                 Qgw         = self.Ks * gwGradient * config.timestep * self.resolution                        # Groundwater velocity in m/s
                 
+                # If the groundwater flow because of the impervious layer is larger than the amount of water available, than it should be set so only the stored water will move.
+                Qgw         = lfr.where(Qgw * config.dt > Sgw, Sgw, Qgw)
+                
                 # Add all vertical processes for the surfacewater and all processes groundwater
                 gwFlux      = ((infiltration - evapotranspirationSoil)/self.porosity) + lfr.upstream(gwLDD, Qgw) - Qgw
                 swFlux      = precipitation - evapotranspirationSurface - infiltration
