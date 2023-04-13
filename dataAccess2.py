@@ -229,7 +229,7 @@ class get():
         return land_c, mannings
     
     def precipitation(date, cellArea, session):
-        rain = 30 > date > 15 or 60 > date > 45
+        rain = 30 > date > 15
         return gen.lue_one() * 1 / (1000 * 3600) * int(config.includePrecipitation) * cellArea * int(rain) # Convert to m/s rate
     
     def pot_evaporation(date, cellArea, session):

@@ -11,12 +11,12 @@ import os
 ### GENERAL SETTINGS ###
 network      = False                                                    # use network disk of NS [True] or local disk [False]
 useAPI       = False                                                    # use API functionality to access data
-scenario     = "De Hupsel5"                                             # scenarios : ["generated", "De Hupsel", "De Tol", "De Hupsel10", "unitTest"]
+scenario     = "De Hupsel"                                             # scenarios : ["generated", "De Hupsel", "De Tol", "De Hupsel10", "unitTest"]
 startDate    = datetime.date(year = 2023, month = 2, day = 24)
 endDate      = datetime.date(year = 2023, month = 2, day = 25)
 dt           = 60                                                       # The time difference between reported data in seconds (for v2)
 timestep     = 1
-dT           = 300                                                      # The times new data will be loaded in.
+dT           = 60                                                      # The times new data will be loaded in.
 v2 = True
 unitTest = False
 
