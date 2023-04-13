@@ -79,27 +79,6 @@ class get():
         data = lfr.from_gdal(output_mem_file, config.partitionShape)
         return data
     
-    def localTemporal(path: str, date: datetime.date, variable: str) -> object:
-        """
-        Summary:
-            Get data from the APIs to use in the model.
-            Uses the format of "path/variable_date.tiff"
-            
-        Input:
-            path: the directory where the files are located
-            date: the datetime date
-            variable: the variable name of interest
-            
-        Returns:
-            data: the data from the tiff file to be used as an lue array
-        """
-        # Create the full path of the corresponding variable for the current
-        variable_path = path + f'{variable}_{config.arrayExtent}_{date}.tiff'
-        
-        # Get the data from the .tif file stored in the path directory
-        data = lfr.from_gdal(variable_path, config.partitionShape)
-        return data
-    
     def soil_csv(dataFile, soilType):
         # Assign K for de Wupsel
         Ks = gen.lue_one() * 0.05
@@ -142,92 +121,6 @@ class get():
                 
         return mannings, permeability, interceptionStorageMax, throughfallFraction
     
-    def landCharacteristics_old_v2(landUse):
-        # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
-        dummy                   = gen.lue_one()
-        permeability            = dummy * 0.8
-        mannings                = dummy * 0.045
-        interceptionStorageMax  = dummy * 0.001
-        throughfallFraction     = dummy * 0.90
-        LAI                     = dummy * 0.5
-        cropFactor              = dummy * 1.0
-        
-        for i in config.total:
-            if i in config.concrete:
-                permeability            = lfr.where(landUse == i, 0.001, permeability)
-                mannings                = lfr.where(landUse == i, 0.015, mannings)
-                interceptionStorageMax  = lfr.where(landUse == i, 0.0025, interceptionStorageMax)
-                throughfallFraction     = lfr.where(landUse == i, 0.95, throughfallFraction)
-                LAI                     = lfr.where(landUse == i, 0.1, LAI)
-                cropFactor              = lfr.where(landUse == i, 8, cropFactor)
-                
-            elif i in config.green:                                                  # Crops are given a multiplier of 1.2 as they also have pore structures \
-                permeability = lfr.where(landUse == i, 1.1, permeability)            # but a different on can be assigned.
-                mannings = lfr.where(landUse == i, 0.035, mannings)
-                interceptionStorageMax  = lfr.where(landUse == i, 0.003, interceptionStorageMax)
-                throughfallFraction     = lfr.where(landUse == i, 0.47, throughfallFraction)
-                LAI                     = lfr.where(landUse == i, 1.5, LAI)
-                cropFactor              = lfr.where(landUse == i, 1, cropFactor)
-                
-            elif i in config.water:                                                  # Any type of water is assigned 1, as this should have the saturated hydraulic conductivity \
-                permeability = lfr.where(landUse == i, 1.0, permeability)            # as precipitation value. --> However, these places probably have inflow from groundwater.
-                mannings = lfr.where(landUse == i, 0.030, mannings)
-                interceptionStorageMax  = lfr.where(landUse == i, 0, interceptionStorageMax)
-                throughfallFraction     = lfr.where(landUse == i, 1.0, throughfallFraction)
-                LAI                     = lfr.where(landUse == i, 0, LAI)
-                cropFactor              = lfr.where(landUse == i, 1, cropFactor)
-            
-            elif i in config.compacted:
-                permeability = lfr.where(landUse == i, 0.5, permeability)
-                mannings = lfr.where(landUse == i, 0.025, mannings)
-                interceptionStorageMax  = lfr.where(landUse == i, 0.003, interceptionStorageMax)
-                throughfallFraction     = lfr.where(landUse == i, 0.95, throughfallFraction)
-                LAI                     = lfr.where(landUse == i, 0.15, LAI)
-                cropFactor              = lfr.where(landUse == i, 8, cropFactor)
-               
-            elif i in config.other_road:
-                permeability = lfr.where(landUse == i, 0.25, permeability) 
-                mannings = lfr.where(landUse == i, 0.015, mannings)
-                interceptionStorageMax  = lfr.where(landUse == i, 0.003, interceptionStorageMax)
-                throughfallFraction     = lfr.where(landUse == i, 0.95, throughfallFraction)
-                LAI                     = lfr.where(landUse == i, 0.15, LAI)
-                cropFactor              = lfr.where(landUse == i, 1, cropFactor)
-
-        return mannings, permeability, interceptionStorageMax, throughfallFraction
-    
-    def landCharacteristics_old(landUse):
-        # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
-        land_c = gen.lue_one() * 0.8
-        mannings = gen.lue_one() * 0.045
-        soil_c = gen.lue_one() * 0.5
-        for i in config.total:
-            if i in config.concrete:
-                land_c = lfr.where(landUse == i, 0.001, land_c)
-                mannings = lfr.where(landUse == i, 0.015, mannings)
-                soil_c = lfr.where(landUse == i, 0, soil_c)
-                
-            elif i in config.green:                             # Crops are given a multiplier of 1.2 as they also have pore structures \
-                land_c = lfr.where(landUse == i, 1.1, land_c)            # but a different on can be assigned.
-                mannings = lfr.where(landUse == i, 0.035, mannings)
-                soil_c = lfr.where(landUse == i, 1, soil_c)
-                
-            elif i in config.water:                                              # Any type of water is assigned 1, as this should have the saturated hydraulic conductivity \
-                land_c = lfr.where(landUse == i, 1.0, land_c)            # as precipitation value. --> However, these places probably have inflow from groundwater.
-                mannings = lfr.where(landUse == i, 0.030, mannings)
-                soil_c = lfr.where(landUse == i, 0, soil_c)
-            
-            elif i in config.compacted:
-                land_c = lfr.where(landUse == i, 0.7, land_c)
-                mannings = lfr.where(landUse == i, 0.025, mannings)
-                soil_c = lfr.where(landUse == i, 0.5, soil_c)
-                
-            elif i in config.other_road:
-                land_c = lfr.where(landUse == i, 0.3, land_c) 
-                mannings = lfr.where(landUse == i, 0.015, mannings)
-                soil_c = lfr.where(landUse == i, 0.2, soil_c)
-                
-        return land_c, mannings
-    
     def precipitation(date, cellArea, session):
         rain = 30 > date > 15
         return gen.lue_one() * 1 / (1000 * 3600) * int(config.includePrecipitation) * cellArea * int(rain) # Convert to m/s rate
@@ -260,35 +153,3 @@ class get():
         evapotranspirationSurface = lfr.where(enoughWaterE, evapotranspirationSurface, precipitation + discharge/config.dt)
         
         return evapotranspirationSurface, evapotranspirationSoil
-        
-    
-    def ieRatio(pot_evaporation, pot_infiltration):
-        ie = pot_evaporation + pot_infiltration
-        
-        i_ratio = lfr.where(ie > 0, pot_infiltration / ie, 0)
-        e_ratio = lfr.where(ie > 0, pot_evaporation / ie, 0)
-
-        return i_ratio, e_ratio
-    
-    def EvaporationInfiltration(precipitation, surfaceWaterHeight, pot_evaporation, pot_infiltration, e_ratio, i_ratio):
-         # Check if the waterheight is more than the evaporation and infiltration combined
-        ie = pot_evaporation + pot_infiltration
-        waterAvailable = surfaceWaterHeight + precipitation
-        enoughWater = waterAvailable >= ie
-        
-        # Calculate the actual evaporation and infiltration
-        evaporation  = lfr.where(enoughWater, pot_evaporation, waterAvailable*e_ratio)
-        infiltration = lfr.where(enoughWater, pot_infiltration, waterAvailable*i_ratio)
-        
-        return evaporation, infiltration
-    
-    def percolation(dem, cellArea, groundWaterHeight, Ks):
-        part = (groundWaterHeight-0.5*dem)/dem
-        part = lfr.where(part <= 0, gen.lue_zero(), part)
-        percolation = lfr.where(dem < 0, gen.lue_zero(), \
-                                Ks * part)                                                # If the dem is negative, there is no percolation
-        percolation = lfr.where(percolation < 0, gen.lue_zero(), percolation) / 100                       # If the percolation is negative, there is no percolation
-        return percolation * int(config.includePercolation) * cellArea
-    
-    def groundFlow():
-        pass
