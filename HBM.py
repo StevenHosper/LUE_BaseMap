@@ -41,9 +41,9 @@ class mainModel():
     def __init__(self):
         # Initialize data required from memory files
         # Get all constants
-        self.dem        = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/dem.tiff', config.partitionShape)               # DEM map of the study area
+        self.dem        = lfr.from_gdal(config.path + f'/data/{config.scenario}/dem.tiff', config.partitionShape)               # DEM map of the study area
         self.dem        = lfr.where(self.dem < 0.1, 35, self.dem)
-        landUse    = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)       # Land-use, example: road
+        landUse         = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)       # Land-use, example: road
         soilType        = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)             # example: sand or clay
         self.Ks, self.porosity    = dA.get.soil_csv(config.soilData, soilType)                                                  # soil characteristic
         self.mannings, self.permeability, self.interceptionStorageMax, self.throughfallFraction = dA.get.landCharacteristics_csv(config.landUseData, landUse)            # land-use characteristics
@@ -54,15 +54,15 @@ class mainModel():
         self.ldd        = lfr.from_gdal(config.path + f'/data/{config.scenario}/ldd_pcr_shaped.tiff', config.partitionShape)
         
         # iniGroundWaterHeight generated
-        #self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundwaterBase + config.waterBelowDEM, self.dem - config.waterBelowDEM, self.groundwaterBase)
-        #self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
+        self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundwaterBase + config.waterBelowDEM, self.dem - config.waterBelowDEM, self.groundwaterBase)
+        self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
         
         # iniGroundWaterHeight from memory
-        self.iniGroundWaterHeight   = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_groundWaterHeight_2023-02-24_299.tiff', config.partitionShape)
-        self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - config.waterBelowDEM, self.iniGroundWaterHeight)
+        #self.iniGroundWaterHeight   = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_groundWaterHeight_2023-02-24_299.tiff', config.partitionShape)
+        #self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - config.waterBelowDEM, self.iniGroundWaterHeight)
         self.iniGroundWaterStorage  = self.iniGroundWaterHeight - (self.dem - config.imperviousLayerBelowDEM)
-        self.iniDischarge           = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_discharge_2023-02-24_299.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
-        #self.iniDischarge           = dG.generate.lue_zero()
+        #self.iniDischarge           = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_discharge_2023-02-24_299.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
+        self.iniDischarge           = dG.generate.lue_zero()
         # self.notBoundaryCells       = dG.generate.boundaryCell() # Currently not working
         self.resolution             = config.resolution * dG.generate.lue_one()
         self.cellArea               = self.resolution * self.resolution
@@ -77,7 +77,7 @@ class mainModel():
         groundWaterHeight   = self.iniGroundWaterHeight
         discharge           = self.iniDischarge
         Sgw                 = self.iniGroundWaterStorage
-        MaxSgw              = config.imperviousLayerBelowDEM
+        MaxSgw              = config.imperviousLayerBelowDEM * self.cellArea
         interceptionStorage = dG.generate.lue_zero()
         
         date = config.startDate
@@ -158,8 +158,8 @@ class mainModel():
                 
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
-                variables = {"discharge": discharge, "groundWaterHeight": groundWaterHeight, "Sgw": Sgw,
-                             "interceptionStorage": interceptionStorage,}
+                variables = {"discharge": discharge, "groundWaterHeight": groundWaterHeight, "Sgw": Sgw, "infiltration": infiltration, "swFlux": swFlux,
+                             "interceptionStorage": interceptionStorage, "precipitation": precipitation}
                 reporting.report.v2(date, time, variables, config.output_path)
         return 0
 
