@@ -69,14 +69,15 @@ class mainModel():
         self.cellArea                   = self.resolution * self.resolution
         self.slope          	        = lfr.slope(self.dem, self.resolution)
         self.impermeableLayerBelowDEM   = float(configuration.modelSettings['impermeableLayerBelowDEM'])
+        self.waterBelowDEM              = float(configuration.modelSettings['waterBelowDEM'])
         # self.notBoundaryCells       = dG.generate.boundaryCell() # Currently not working
 
         # Load initial groundWaterHeight, if no raster is supplied, use the waterBelowDEM in combination with DEM to create a initialGroundWaterHeight layer.
         try:
             self.iniGroundWaterHeight   = lfr.from_gdal(inputDir + configuration.dataSettings['iniGroundWaterHeight'], partitionShape)
-            self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - float(configuration.modelSettings['waterBelowDEM']), self.iniGroundWaterHeight)
+            self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - self.waterBelowDEM, self.iniGroundWaterHeight)
         except:
-            self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundWaterBase + config.waterBelowDEM, self.dem - float(configuration.modelSettings['waterBelowDEM']),
+            self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundWaterBase + self.waterBelowDEM, self.dem - self.waterBelowDEM,
                                                     self.groundWaterBase)
             self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
         
@@ -97,8 +98,8 @@ class mainModel():
 
     @lfr.runtime_scope
     def dynamicModel(self, configuration):
-        dt = config.dt              # Amount of small timesteps for routing in seconds
-        dT = config.dT              # Amount of large timesteps for loading and saving data
+        dt = configuration.modelSettings['iterationsBeforeReport']
+        dT = configuration.modelSettings['reportsBeforeFinished']
         
         # Loading initial conditions
         groundWaterHeight   = self.iniGroundWaterHeight
@@ -107,7 +108,7 @@ class mainModel():
         interceptionStorage = self.iniInterceptionStorage
         
         # Setting min and max soil values
-        MaxSgw              = config.impermeableLayerBelowDEM * self.cellArea       # Full storage of porosity
+        MaxSgw              =self.impermeableLayerBelowDEM * self.cellArea       # Full storage of porosity
         MinSgw              = MaxSgw * (self.wiltingPoint / self.porosity)          # Minimum storage because of wilting point
         
         # Values for discharge to height calculation
@@ -122,24 +123,24 @@ class mainModel():
         channelArea         = width * channelLength
         
         # Kinematic Surface Water Routing Constants
-        alpha               = 1.5
-        beta                = 0.6
-        timestepduration    = 1.0 * config.timestep
+        alpha       = 1.5
+        beta        = 0.6
+        timestep    = 1.0 * configuration.modelSettings['timestep']
 
         # Static, really small value because inflow = 0 is not accepted
         inflow = dG.generate.lue_one()*0.000000000001
         
         # Current date
-        date = config.startDate
+        date = configuration.modelSettings['startDate']
         
         # Open file to write maximum discharge values to for post simulation validation.
-        with open(config.output_path + "maximumDischarge.csv", "w", newline="") as f:
+        with open(self.outputDir + "maximumDischarge.csv", "w", newline="") as f:
             writer = csv.writer(f, delimiter=';')
             
             # Start model for dT large periods
             for i in range(dT):
                 # Time in minutes is the small iteration multiplied with the timestep (both in seconds) divided by 60 seconds.
-                time = int((i * (dt*config.timestep)/60)) 
+                time = int((i * (dt*timestep)/60)) 
                 
                 # Load flux and storage values
                 precipitation               = dA.get.precipitation(time, self.cellArea, dA.get.apiSession()) # m/s
@@ -156,10 +157,10 @@ class mainModel():
                 # Groundwater LDD, gradient and flow flux
                 gwLDD       = lfr.d8_flow_direction(groundWaterHeight)
                 gwGradient  = (groundWaterHeight - lfr.downstream(gwLDD, groundWaterHeight)) / self.resolution
-                Qgw         = self.Ks * gwGradient * config.timestep * self.resolution                        # Groundwater velocity in m/s
+                Qgw         = self.Ks * gwGradient * timestep * self.resolution                        # Groundwater velocity in m/s
                 
                 # If the groundwater flow because of the impermeable layer is larger than the amount of water available, than it should be set so only the stored water will move.
-                Qgw         = lfr.where(Qgw * config.dt > Sgw - MinSgw, Sgw - MinSgw, Qgw)
+                Qgw         = lfr.where(Qgw * dt > Sgw - MinSgw, Sgw - MinSgw, Qgw)
                 Qgw         = lfr.where(Qgw < 0.000000000001, 0.000000000001, Qgw)
                 
                 # Add all vertical processes for the surfacewater and all processes groundwater
@@ -185,7 +186,7 @@ class mainModel():
 
                     # Water routing based on the kinematic wave function, currently alpha is a float. Hopefully mannings raster can be used in the future.
                     discharge           = lfr.kinematic_wave(self.ldd, discharge, inflow,\
-                                                alpha, beta, timestepduration,\
+                                                alpha, beta, timestep,\
                                                 channelLength,)
                     
                     # Any water that is moved from groundwater to discharge has to be removed from the groundwaterStorage
@@ -203,7 +204,7 @@ class mainModel():
                 Sgw = lfr.where(Sgw <= 0, 0, Sgw)
                 
                 # Adjust the GW Table for the LDD creation of the next timestep.
-                groundWaterHeight = self.dem - config.impermeableLayerBelowDEM + Sgw/self.cellArea
+                groundWaterHeight = self.dem - self.impermeableLayerBelowDEM + Sgw/self.cellArea
                 
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
