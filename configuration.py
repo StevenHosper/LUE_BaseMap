@@ -16,7 +16,7 @@ startDate    = datetime.date(year = 2023, month = 2, day = 24)
 endDate      = datetime.date(year = 2023, month = 2, day = 25)
 dt           = 60                                                       # The time difference between reported data in seconds (for v2)
 timestep     = 1
-dT           = 10                                                      # The times new data will be loaded in.
+dT           = 600                                                      # The times new data will be loaded in.
 v2 = True
 unitTest = False
 
@@ -42,7 +42,7 @@ includePercolation   = False
 
 # Set values
 waterBelowDEM               = 0.5
-imperviousLayerBelowDEM     = 2.00
+impermeableLayerBelowDEM    = 2.00
 groundwaterBase             = 23.25
 
 if scenario == "De Hupsel" or scenario == "De Tol":
