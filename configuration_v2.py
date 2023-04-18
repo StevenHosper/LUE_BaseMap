@@ -22,6 +22,8 @@ class Configuration(object):
         
         self.iniFilePath = os.path.join(self.workDir, iniFile)
         
+        self.parseConfigFile(self.iniFilePath)
+        
         
         
     def parseConfigFile(self, fileName):
@@ -41,3 +43,10 @@ class Configuration(object):
             for opt in options:
                 val = config.get(group, opt)
                 self.__getattribute__(group)[opt] = val
+
+# For in-file testing
+if __name__ == '__main__':
+    configuration = Configuration("F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/config.ini")
+    
+    print(configuration.generalSettings)
+    
