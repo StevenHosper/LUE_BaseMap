@@ -65,32 +65,38 @@ class mainModel():
         self.ldd        = lfr.from_gdal(inputDir + configuration.dataSettings['ldd'], partitionShape)
         
         # Set constants
-        self.resolution             = configuration.modelSettings['resolution'] * dG.generate.lue_one()
-        self.cellArea               = self.resolution * self.resolution
-        self.slope          	    = lfr.slope(self.dem, self.resolution)
+        self.resolution                 = float(configuration.modelSettings['resolution'])
+        self.cellArea                   = self.resolution * self.resolution
+        self.slope          	        = lfr.slope(self.dem, self.resolution)
+        self.impermeableLayerBelowDEM   = float(configuration.modelSettings['impermeableLayerBelowDEM'])
         # self.notBoundaryCells       = dG.generate.boundaryCell() # Currently not working
+
+        # Load initial groundWaterHeight, if no raster is supplied, use the waterBelowDEM in combination with DEM to create a initialGroundWaterHeight layer.
+        try:
+            self.iniGroundWaterHeight   = lfr.from_gdal(inputDir + configuration.dataSettings['iniGroundWaterHeight'], partitionShape)
+            self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - float(configuration.modelSettings['waterBelowDEM']), self.iniGroundWaterHeight)
+        except:
+            self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundWaterBase + config.waterBelowDEM, self.dem - float(configuration.modelSettings['waterBelowDEM']),
+                                                    self.groundWaterBase)
+            self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
         
-        # iniGroundWaterHeight generated
-        #self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundWaterBase + config.waterBelowDEM, self.dem - config.waterBelowDEM, self.groundWaterBase)
-        #self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
-        
-        # iniGroundWaterHeight from memory
-        self.iniGroundWaterHeight   = lfr.from_gdal(inputDir + configuration.dataSettings['iniGroundWaterHeight'], partitionShape)
-        self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - configuration.modelSettings['waterBelowDEM'], self.iniGroundWaterHeight)
-        
-        # Initial discharge
-        self.iniDischarge           = lfr.from_gdal(inputDir + configuration.dataSettings['iniDischarge'], partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
-        #self.iniDischarge           = dG.generate.lue_zero()
+        # Load initial discharge, if no raster is supplied, set to zero.
+        try:
+            self.iniDischarge           = lfr.from_gdal(inputDir + configuration.dataSettings['iniDischarge'], partitionShape)
+        except:
+            self.iniDischarge           = dG.generate.lue_zero()
         
         # Initial InterceptionStorage and groundWaterStorage
-        self.iniInterceptionStorage = dG.generate.lue_zero()
-        self.iniGroundWaterStorage  = (self.iniGroundWaterHeight - (self.dem - config.impermeableLayerBelowDEM)) * self.cellArea
-        
-        
+        try:
+            self.iniInterceptionStorage = lfr.from_gdal(inputDir + configuration.dataSettings['iniInterceptionStorage'], partitionShape)
+        except:
+            self.iniInterceptionStorage = dG.generate.lue_zero()
 
+        self.iniGroundWaterStorage  = (self.iniGroundWaterHeight - (self.dem - self.impermeableLayerBelowDEM)) * self.cellArea
+        
 
     @lfr.runtime_scope
-    def dynamicModel(self):
+    def dynamicModel(self, configuration):
         dt = config.dt              # Amount of small timesteps for routing in seconds
         dT = config.dT              # Amount of large timesteps for loading and saving data
         
@@ -233,8 +239,7 @@ if lfr.on_root_locality():
     # Run the main model
     configuration = Configuration("F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/config.ini")
     main = mainModel(configuration)
-    sys.exit()
-    main.dynamicModel()
+    main.dynamicModel(configuration)
 
     # Process the results into a gif
     # MakeGIF.main()
