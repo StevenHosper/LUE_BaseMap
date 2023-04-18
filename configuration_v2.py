@@ -14,6 +14,7 @@ class Configuration(object):
         
         object.__init__(self)
         
+        # Check if ini-file is given
         if iniFile is None:
             raise Exception('Error: No configuration file found')
         
@@ -25,4 +26,18 @@ class Configuration(object):
         
     def parseConfigFile(self, fileName):
         
+        # Activate parser and read ini-file
         config = configparser.ConfigParser()
+        config.optionxform = str
+        config.read(fileName)
+        
+        # Read the different available setting groups
+        self.groups = config.sections()
+        
+        # Read all settings for every group
+        for group in self.groups:
+            vars(self)[group] = {}              # to instantiate self.GENERAL
+            options = config.options(group)
+            for opt in options:
+                val = config.get(group, opt)
+                self.__getattribute__(group)[opt] = val
