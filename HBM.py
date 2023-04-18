@@ -42,8 +42,8 @@ Options:
 class mainModel():
     def __init__(self, configuration):
         # Set directories
-        inputDir  = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
-        outputDir = configuration.generalSettings['outputDir'] + configuration.generalSettings['scenario']
+        inputDir        = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
+        self.outputDir  = configuration.generalSettings['outputDir'] + configuration.generalSettings['scenario']
         
         partitionShape  = 2 * (configuration.modelSettings['partitionExtent'],)
         arrayShape      = 2 * (configuration.modelSettings['arrayExtent'],)
@@ -209,7 +209,7 @@ class mainModel():
                 print(f"Done: {i+1}/{dT}")
                 variables = {"discharge": discharge, "seepage": seepage, "Qgw": Qgw, "groundWaterHeight": groundWaterHeight, "Sgw": Sgw, "evapoSoil": evapotranspirationSoil, "infiltration": infiltration,
                              "gwFlux": gwFlux, "swFlux": swFlux}
-                reporting.report.v2(date, time, variables, config.output_path)
+                reporting.report.v2(date, time, variables, self.outputDir)
         return 0
 
 
