@@ -54,6 +54,12 @@ class mainModel():
         # self.ldd = lfr.d8_flow_direction(self.dem)
         self.ldd        = lfr.from_gdal(config.path + f'/data/{config.scenario}/ldd_pcr_shaped.tiff', config.partitionShape)
         
+        # Set constants
+        self.resolution             = config.resolution * dG.generate.lue_one()
+        self.cellArea               = self.resolution * self.resolution
+        self.slope          	    = lfr.slope(self.dem, config.resolution)
+        # self.notBoundaryCells       = dG.generate.boundaryCell() # Currently not working
+        
         # iniGroundWaterHeight generated
         #self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundwaterBase + config.waterBelowDEM, self.dem - config.waterBelowDEM, self.groundwaterBase)
         #self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
@@ -69,13 +75,6 @@ class mainModel():
         # Initial InterceptionStorage and groundWaterStorage
         self.iniInterceptionStorage = dG.generate.lue_zero()
         self.iniGroundWaterStorage  = (self.iniGroundWaterHeight - (self.dem - config.impermeableLayerBelowDEM)) * self.cellArea
-        
-        # self.notBoundaryCells       = dG.generate.boundaryCell() # Currently not working
-        
-        # Set constants
-        self.resolution             = config.resolution * dG.generate.lue_one()
-        self.cellArea               = self.resolution * self.resolution
-        self.slope          	    = lfr.slope(self.dem, config.resolution)
         
         
 
@@ -193,7 +192,7 @@ class mainModel():
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
                 variables = {"discharge": discharge, "seepage": seepage, "Qgw": Qgw, "groundWaterHeight": groundWaterHeight, "Sgw": Sgw, "evapoSoil": evapotranspirationSoil, "infiltration": infiltration,
-                             "gwFlux": gwFlux}
+                             "gwFlux": gwFlux, "swFlux": swFlux}
                 reporting.report.v2(date, time, variables, config.output_path)
         return 0
 
