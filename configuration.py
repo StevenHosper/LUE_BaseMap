@@ -43,7 +43,7 @@ includePercolation   = False
 # Set values
 waterBelowDEM               = 0.5
 impermeableLayerBelowDEM    = 2.00
-groundwaterBase             = 23.25
+groundWaterBase             = 23.25
 
 if scenario == "De Hupsel" or scenario == "De Tol":
     arrayExtent     = 5000
