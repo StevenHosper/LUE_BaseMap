@@ -83,13 +83,14 @@ class get():
         # Assign K for de Wupsel
         Ks = gen.lue_one() * 0.05
         porosity = gen.lue_one() * 0.35
+        wiltingPoint = gen.lue_one() * 0.15
         scTable = pd.read_csv(dataFile)
         ID = scTable["ID"]
         KsValue = scTable["Ks"]
         for count, ID in enumerate(ID):
             Ks = lfr.where(soilType == ID, KsValue[count], Ks)
             
-        return (Ks / 86400), porosity
+        return (Ks / 86400), porosity, wiltingPoint
     
     def landCharacteristics_csv(dataFile, landUse):
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
@@ -122,8 +123,8 @@ class get():
         return mannings, permeability, interceptionStorageMax, throughfallFraction
     
     def precipitation(date, cellArea, session):
-        rain = 30 > date > 15
-        return gen.lue_one() * 1 / (1000 * 3600) * int(config.includePrecipitation) * cellArea * int(rain) # Convert to m/s rate
+        rain = 15 < date < 30
+        return gen.lue_one() * 0 / (1000 * 3600) * int(config.includePrecipitation) * cellArea * int(rain) # Convert to m/s rate
     
     def pot_evaporation(date, cellArea, session):
         pot_evaporation = gen.lue_one() * 3 / 10 / (1000*3600) # Convert from mm/d to m/s 
