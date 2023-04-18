@@ -17,6 +17,7 @@ import numpy as np
 # Own functions
 # TO-DO: Reformat by the use of: from ... import ... as ...
 import configuration as config
+from configuration_v2 import Configuration
 import dataAccess2 as dA
 import MakeGIF
 import reporting
@@ -39,48 +40,63 @@ Options:
 )
 
 class mainModel():
-    def __init__(self):
-        # Initialize data required from memory files
-        # Get all constants
-        self.dem        = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/dem.tiff', config.partitionShape)               # DEM map of the study area
-        self.dem        = lfr.where(self.dem < 0.1, 35, self.dem)
-        landUse         = lfr.from_gdal(config.path + f'/data/{config.scenario}/landgebruik.tiff', config.partitionShape)       # Land-use, example: road
-        soilType        = lfr.from_gdal(config.path + f'/data/{config.scenario}/bodem.tiff', config.partitionShape)             # example: sand or clay
-        self.Ks, self.porosity, self.wiltingPoint = dA.get.soil_csv(config.soilData, soilType)                                  # soil characteristic
-        self.mannings, self.permeability, self.interceptionStorageMax, self.throughfallFraction = dA.get.landCharacteristics_csv(config.landUseData, landUse)            # land-use characteristics
+    def __init__(self, configuration):
+        # Set directories
+        inputDir  = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
+        outputDir = configuration.generalSettings['outputDir'] + configuration.generalSettings['scenario']
         
-        self.groundwaterBase         = config.groundwaterBase
+        partitionShape  = 2 * (configuration.modelSettings['partitionExtent'],)
+        arrayShape      = 2 * (configuration.modelSettings['arrayExtent'],)
+        
+        # Initialize data required from memory files
+        # Get all constants        
+        self.dem        = lfr.from_gdal(inputDir + configuration.dataSettings['dem'], partitionShape)               # DEM map of the study area
+        self.dem        = lfr.where(self.dem < 0.1, 35, self.dem)
+        landUse         = lfr.from_gdal(inputDir + configuration.dataSettings['landUseMap'], partitionShape)       # Land-use, example: road
+        soilType        = lfr.from_gdal(inputDir + configuration.dataSettings['soilMap'], partitionShape)             # example: sand or clay
+        self.Ks, self.porosity, self.wiltingPoint = dA.get.soil_csv(configuration.generalSettings['inputDir'] + configuration.dataSettings['soilData'], soilType)                                  # soil characteristic
+        self.mannings, self.permeability, self.interceptionStorageMax, self.throughfallFraction = \
+            dA.get.landCharacteristics_csv(configuration.generalSettings['inputDir'] + configuration.dataSettings['landUseData'],
+                                           landUse)            # land-use characteristics
+        
+        self.groundWaterBase         = float(configuration.modelSettings['groundWaterBase']) * dG.generate.lue_one()
         
         # self.ldd = lfr.d8_flow_direction(self.dem)
-        self.ldd        = lfr.from_gdal(config.path + f'/data/{config.scenario}/ldd_pcr_shaped.tiff', config.partitionShape)
+        self.ldd        = lfr.from_gdal(inputDir + configuration.dataSettings['ldd'], partitionShape)
         
         # Set constants
-        self.resolution             = config.resolution * dG.generate.lue_one()
-        self.cellArea               = self.resolution * self.resolution
-        self.slope          	    = lfr.slope(self.dem, config.resolution)
+        self.resolution                 = float(configuration.modelSettings['resolution'])
+        self.cellArea                   = self.resolution * self.resolution
+        self.slope          	        = lfr.slope(self.dem, self.resolution)
+        self.impermeableLayerBelowDEM   = float(configuration.modelSettings['impermeableLayerBelowDEM'])
         # self.notBoundaryCells       = dG.generate.boundaryCell() # Currently not working
+
+        # Load initial groundWaterHeight, if no raster is supplied, use the waterBelowDEM in combination with DEM to create a initialGroundWaterHeight layer.
+        try:
+            self.iniGroundWaterHeight   = lfr.from_gdal(inputDir + configuration.dataSettings['iniGroundWaterHeight'], partitionShape)
+            self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - float(configuration.modelSettings['waterBelowDEM']), self.iniGroundWaterHeight)
+        except:
+            self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundWaterBase + config.waterBelowDEM, self.dem - float(configuration.modelSettings['waterBelowDEM']),
+                                                    self.groundWaterBase)
+            self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
         
-        # iniGroundWaterHeight generated
-        #self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundwaterBase + config.waterBelowDEM, self.dem - config.waterBelowDEM, self.groundwaterBase)
-        #self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem, self.iniGroundWaterHeight)
-        
-        # iniGroundWaterHeight from memory
-        self.iniGroundWaterHeight   = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_groundWaterHeight_2023-02-24_599.tiff', config.partitionShape)
-        self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - config.waterBelowDEM, self.iniGroundWaterHeight)
-        
-        # Initial discharge
-        self.iniDischarge           = lfr.from_gdal(config.path + f'/data/{config.scenario}/v2/1_discharge_2023-02-24_599.tiff', config.partitionShape) # Initial discharge through cell is zero (is speed of the water column in m/s)
-        #self.iniDischarge           = dG.generate.lue_zero()
+        # Load initial discharge, if no raster is supplied, set to zero.
+        try:
+            self.iniDischarge           = lfr.from_gdal(inputDir + configuration.dataSettings['iniDischarge'], partitionShape)
+        except:
+            self.iniDischarge           = dG.generate.lue_zero()
         
         # Initial InterceptionStorage and groundWaterStorage
-        self.iniInterceptionStorage = dG.generate.lue_zero()
-        self.iniGroundWaterStorage  = (self.iniGroundWaterHeight - (self.dem - config.impermeableLayerBelowDEM)) * self.cellArea
-        
-        
+        try:
+            self.iniInterceptionStorage = lfr.from_gdal(inputDir + configuration.dataSettings['iniInterceptionStorage'], partitionShape)
+        except:
+            self.iniInterceptionStorage = dG.generate.lue_zero()
 
+        self.iniGroundWaterStorage  = (self.iniGroundWaterHeight - (self.dem - self.impermeableLayerBelowDEM)) * self.cellArea
+        
 
     @lfr.runtime_scope
-    def dynamicModel(self):
+    def dynamicModel(self, configuration):
         dt = config.dt              # Amount of small timesteps for routing in seconds
         dT = config.dT              # Amount of large timesteps for loading and saving data
         
@@ -221,8 +237,9 @@ lfr.start_hpx_runtime(cfg)
 # root locality unless you know what you are doing.
 if lfr.on_root_locality():
     # Run the main model
-    main = mainModel()
-    main.dynamicModel()
+    configuration = Configuration("F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/config.ini")
+    main = mainModel(configuration)
+    main.dynamicModel(configuration)
 
     # Process the results into a gif
     # MakeGIF.main()
