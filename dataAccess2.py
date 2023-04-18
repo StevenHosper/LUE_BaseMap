@@ -123,8 +123,8 @@ class get():
         return mannings, permeability, interceptionStorageMax, throughfallFraction
     
     def precipitation(date, cellArea, session):
-        rain = 15 < date < 30
-        return gen.lue_one() * 0 / (1000 * 3600) * int(config.includePrecipitation) * cellArea * int(rain) # Convert to m/s rate
+        rain = 15 < date < 45
+        return gen.lue_one() * 2 / (1000 * 3600) * int(config.includePrecipitation) * cellArea * int(rain) # Convert to m/s rate
     
     def pot_evaporation(date, cellArea, session):
         pot_evaporation = gen.lue_one() * 3 / 10 / (1000*3600) # Convert from mm/d to m/s 
