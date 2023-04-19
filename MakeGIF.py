@@ -100,21 +100,28 @@ def run(configuration):
     argv = [arg for arg in sys.argv[1:] if not arg.startswith("--hpx")]
     arguments = docopt.docopt(usage, argv)
     
+    # Use given path
     path = configuration.generalSettings['outputDir'] + configuration.generalSettings['scenario']
     
-    # Implemenet directories for both work and home adress.
+    # Determine variables and values
     variables   = configuration.gifSettings['variables'].split(", ")
     vminList    = configuration.gifSettings['vmin'].split(", ")
     vmaxList    = configuration.gifSettings['vmax'].split(", ")
+    
+    # Combine
     vminDict    = dict(zip(variables, vminList))
     vmaxDict    = dict(zip(variables, vmaxList))
-    nr_rasters  = configuration.gifSettings('nrRasters')
+    
+    # Set amount of rasters and timestep
+    nr_rasters  = int(configuration.gifSettings['nrRasters'])
+    timestep    = int(configuration.modelSettings['timestep'])
     assert nr_rasters >= 0
     
+    # Create animations
     for var in variables:
-        raster_pathname = f'{path}/{var}'
+        raster_pathname = f'{path}/{timestep}_{var}'
         animation_pathname = f'{path}/{var}.gif'
-
+        print(raster_pathname)
         assert not os.path.splitext(raster_pathname)[1]
         
         vmin = vminDict[var]
