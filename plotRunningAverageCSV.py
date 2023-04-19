@@ -21,7 +21,7 @@ discharge = pd.read_csv(config.path + f'/output/{config.scenario}/maximumDischar
 discharge.head()
 
 # Creating exponential running mean for x amount of seconds (now 60)
-x = 60
+x = 3600
 discharge[f'EWMA{x}'] = discharge['Discharge'].ewm(span=x).mean()
 
 discharge.head()
