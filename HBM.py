@@ -20,7 +20,7 @@ import configuration as config
 from configuration_v2 import Configuration
 import dataAccess2 as dA
 import MakeGIF
-import reporting
+from reporting import report
 import dataGen as dG
 
 # Timer to add some measure of functionality to the program
@@ -69,6 +69,7 @@ class mainModel():
         self.cellArea                   = self.resolution * self.resolution
         self.slope          	        = lfr.slope(self.dem, self.resolution)
         self.impermeableLayerBelowDEM   = float(configuration.modelSettings['impermeableLayerBelowDEM'])
+        self.impermeableLayerHeight     = self.dem - self.impermeableLayerBelowDEM
         self.waterBelowDEM              = float(configuration.modelSettings['waterBelowDEM'])
         # self.notBoundaryCells       = dG.generate.boundaryCell() # Currently not working
 
@@ -93,13 +94,13 @@ class mainModel():
         except:
             self.iniInterceptionStorage = dG.generate.lue_zero()
 
-        self.iniGroundWaterStorage  = (self.iniGroundWaterHeight - (self.dem - self.impermeableLayerBelowDEM)) * self.cellArea
+        self.iniGroundWaterStorage  = (self.iniGroundWaterHeight - (self.impermeableLayerHeight)) * self.cellArea
         
 
     @lfr.runtime_scope
     def dynamicModel(self, configuration):
-        dt = configuration.modelSettings['iterationsBeforeReport']
-        dT = configuration.modelSettings['reportsBeforeFinished']
+        dt = int(configuration.modelSettings['iterationsBeforeReport'])
+        dT = int(configuration.modelSettings['reportsBeforeFinished'])
         
         # Loading initial conditions
         groundWaterHeight   = self.iniGroundWaterHeight
@@ -119,13 +120,13 @@ class mainModel():
         coefficient         = self.mannings / (sqrtSlope * width)
         
         # Channel length and area
-        channelLength       = self.resolution
+        channelLength       = self.resolution * dG.generate.lue_one()
         channelArea         = width * channelLength
         
         # Kinematic Surface Water Routing Constants
         alpha       = 1.5
         beta        = 0.6
-        timestep    = 1.0 * configuration.modelSettings['timestep']
+        timestep    = 1.0 * float(configuration.modelSettings['timestep'])
 
         # Static, really small value because inflow = 0 is not accepted
         inflow = dG.generate.lue_one()*0.000000000001
@@ -160,8 +161,8 @@ class mainModel():
                 Qgw         = self.Ks * gwGradient * timestep * self.resolution                        # Groundwater velocity in m/s
                 
                 # If the groundwater flow because of the impermeable layer is larger than the amount of water available, than it should be set so only the stored water will move.
-                Qgw         = lfr.where(Qgw * dt > Sgw - MinSgw, Sgw - MinSgw, Qgw)
-                Qgw         = lfr.where(Qgw < 0.000000000001, 0.000000000001, Qgw)
+                Qgw         = lfr.where(Qgw * dt > Sgw - MinSgw, (Sgw - MinSgw)/dt, Qgw)
+                Qgw         = lfr.where(Sgw < MinSgw, 0.000000000001, Qgw)
                 
                 # Add all vertical processes for the surfacewater and all processes groundwater
                 gwFlux      = ((infiltration - evapotranspirationSoil)/self.porosity) + lfr.upstream(gwLDD, Qgw) - Qgw          # Is now in cubic meters
@@ -199,18 +200,14 @@ class mainModel():
                     # Write value to csv for later validation
                     writer.writerow([i*60 + j, Qmaxvalue])
                 
-                # Make sure the storage of water can never be smaller than zero. There cannot be negative storage. Because we do not adjust fluxes every second,
-                # but every 60 seconds it is possible a cell is depleted and becomes slightly negative.
-                Sgw = lfr.where(Sgw <= 0, 0, Sgw)
-                
                 # Adjust the GW Table for the LDD creation of the next timestep.
-                groundWaterHeight = self.dem - self.impermeableLayerBelowDEM + Sgw/self.cellArea
+                groundWaterHeight = self.impermeableLayerHeight + Sgw/self.cellArea
                 
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
                 variables = {"discharge": discharge, "seepage": seepage, "Qgw": Qgw, "groundWaterHeight": groundWaterHeight, "Sgw": Sgw, "evapoSoil": evapotranspirationSoil, "infiltration": infiltration,
                              "gwFlux": gwFlux, "swFlux": swFlux}
-                reporting.report.v2(date, time, variables, self.outputDir)
+                report.dynamic(date, time, variables, self.outputDir)
         return 0
 
 
