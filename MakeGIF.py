@@ -99,40 +99,28 @@ Options:
 def run(configuration):
     argv = [arg for arg in sys.argv[1:] if not arg.startswith("--hpx")]
     arguments = docopt.docopt(usage, argv)
-    root_path = os.path.dirname(__file__)
+    
+    path = configuration.generalSettings['outputDir'] + configuration.generalSettings['scenario']
     
     # Implemenet directories for both work and home adress.
-    at_work = False
-    variable = 'discharge'
-    if at_work:
-        raster_pathname = f'{root_path}/output/{config.scenario}/{variable}'
-        animation_pathname = f'{root_path}/output/{config.scenario}/{variable}.gif'
-    else:
-        raster_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{config.scenario}/{config.timestep}_{variable}'
-        animation_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{config.scenario}/{variable}.gif'
-    
-    assert not os.path.splitext(raster_pathname)[1]
-
-    nr_rasters = 599
+    variables   = configuration.gifSettings['variables'].split(", ")
+    vminList    = configuration.gifSettings['vmin'].split(", ")
+    vmaxList    = configuration.gifSettings['vmax'].split(", ")
+    vminDict    = dict(zip(variables, vminList))
+    vmaxDict    = dict(zip(variables, vmaxList))
+    nr_rasters  = configuration.gifSettings('nrRasters')
     assert nr_rasters >= 0
     
-    makeGIF.create_animation(raster_pathname, nr_rasters, animation_pathname, 0, 0.02)
-    
-    # Second animation
-    variable = 'Sgw'
-    if at_work:
-        raster_pathname = f'{root_path}/output/{config.scenario}/{variable}'
-        animation_pathname = f'{root_path}/output/{config.scenario}/{variable}.gif'
-    else:
-        raster_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{config.scenario}/{config.timestep}_{variable}'
-        animation_pathname = f'C:/Users/steven.hosper/Desktop/Mapje Stage/output/{config.scenario}/{variable}.gif'
-    
-    assert not os.path.splitext(raster_pathname)[1]
+    for var in variables:
+        raster_pathname = f'{path}/{var}'
+        animation_pathname = f'{path}/{var}.gif'
 
-    nr_rasters = 599
-    assert nr_rasters >= 0
-
-    makeGIF.create_animation2(raster_pathname, nr_rasters, animation_pathname, 20, 50)
+        assert not os.path.splitext(raster_pathname)[1]
+        
+        vmin = vminDict[var]
+        vmax = vmaxDict[var]
+        
+        makeGIF.create_animation(raster_pathname, nr_rasters, animation_pathname, vmin, vmax)
 
 
 if __name__ == "__main__":
