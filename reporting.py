@@ -11,5 +11,5 @@ import configuration as config
 class report():
     def dynamic(date, time, variables, output_path):
         for variable, data in variables.items():
-            lfr.to_gdal(data, output_path + f'{config.timestep}_{variable}_{date}_{time}.tiff')
+            lfr.to_gdal(data, output_path + f'/{config.timestep}_{variable}_{date}_{time}.tiff')
         return 0
