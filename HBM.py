@@ -207,7 +207,11 @@ class mainModel():
                 print(f"Done: {i+1}/{dT}")
                 variables = {"discharge": discharge, "seepage": seepage, "Qgw": Qgw, "groundWaterHeight": groundWaterHeight, "Sgw": Sgw, "evapoSoil": evapotranspirationSoil, "infiltration": infiltration,
                              "gwFlux": gwFlux, "swFlux": swFlux}
-                report.dynamic(date, time, variables, self.outputDir)
+                dict = {}
+                # Testing for automatic function
+                for var in configuration.reportSettings['variables'].split(", "):
+                    dict[var] = globals()[var]
+                report.dynamic(date, time, dict, self.outputDir)
         return 0
 
 
@@ -240,6 +244,8 @@ if lfr.on_root_locality():
     main.dynamicModel(configuration)
 
     # Process the results into a gif
-    # MakeGIF.main()
+    if configuration.generalSettings['makeGIF'] == 'True':
+        print(f"Creating a GIF for: {configuration.gifSettings['variables']}.")
+        MakeGIF.run(configuration)
 
 print("--- %s seconds ---" % (time.time() - start_time))
