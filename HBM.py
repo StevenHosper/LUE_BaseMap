@@ -109,6 +109,7 @@ class mainModel():
         # Loading initial conditions
         groundWaterHeight   = self.iniGroundWaterHeight
         discharge           = self.iniDischarge
+        height              = height = lfr.pow(coefficient*discharge, 0.6)
         Sgw                 = self.iniGroundWaterStorage
         interceptionStorage = self.iniInterceptionStorage
         
@@ -153,15 +154,17 @@ class mainModel():
                                               dA.get.interception(self.cellArea, interceptionStorage, self.interceptionStorageMax, precipitation, \
                                                                   ref_evaporation, self.throughfallFraction)
                 evapotranspirationSurface, evapotranspirationSoil = \
-                                              dA.get.evapotranspiration(precipitation, evapotranspirationSurface, discharge)
+                                              dA.get.evapotranspiration(precipitation, evapotranspirationSurface, height)
                 infiltration                = dA.get.pot_infiltration(Sgw, MaxSgw, self.cellArea, self.Ks, self.permeability, self.porosity, \
-                                                                      discharge, precipitation, evapotranspirationSurface)
+                                                                      height, precipitation, evapotranspirationSurface)
 
 
                 # Groundwater LDD, gradient and flow flux
                 gwLDD       = lfr.d8_flow_direction(groundWaterHeight)
-                gwGradient  = (groundWaterHeight - lfr.downstream(gwLDD, groundWaterHeight)) / self.resolution
-                Qgw         = self.Ks * gwGradient * timestep * self.resolution                        # Groundwater velocity in m/s
+                dHgw        = groundWaterHeight - lfr.downstream(gwLDD, groundWaterHeight)
+                gwGradient  = (dHgw) / self.resolution
+                dHgw        = lfr.where(dHgw < Sgw, dHgw, Sgw)
+                Qgw         = self.Ks * gwGradient * timestep * self.resolution * dHgw * self.resolution                       # Groundwater velocity in m/s
                 
                 # If the groundwater flow because of the impermeable layer is larger than the amount of water available, than it should be set so only the stored water will move.
                 Qgw         = lfr.where(Qgw * dt > Sgw - MinSgw, (Sgw - MinSgw)/dt, Qgw)
@@ -174,8 +177,6 @@ class mainModel():
                 for j in range(dt):
                     # The groundwater is adjusted by the fluxes
                     Sgw         = Sgw + gwFlux                                                                     
-                    
-                    height = lfr.pow(coefficient*discharge, 0.6)
                     
                     # If the groundwater table surpases the digital elevation map, groundwater is turned into runoff.
                     seepage     = lfr.where(Sgw > MaxSgw, (Sgw - MaxSgw)*self.porosity, 0)
@@ -192,6 +193,8 @@ class mainModel():
                     discharge           = lfr.kinematic_wave(self.ldd, discharge, inflow,\
                                                 alpha, beta, timestep,\
                                                 channelLength,)
+                    
+                    height = lfr.pow(coefficient*discharge, 0.6)
                     
                     # Any water that is moved from groundwater to discharge has to be removed from the groundwaterStorage
                     Sgw         = Sgw - (seepage/self.porosity)
