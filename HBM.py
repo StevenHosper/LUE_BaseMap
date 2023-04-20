@@ -42,7 +42,7 @@ Options:
 class mainModel():
     def __init__(self, configuration):
         # Set directories
-        inputDir        = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
+        self.inputDir   = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
         self.outputDir  = configuration.generalSettings['outputDir'] + configuration.generalSettings['scenario']
         
         partitionShape  = 2 * (configuration.modelSettings['partitionExtent'],)
@@ -50,10 +50,10 @@ class mainModel():
         
         # Initialize data required from memory files
         # Get all constants        
-        self.dem        = lfr.from_gdal(inputDir + configuration.dataSettings['dem'], partitionShape)               # DEM map of the study area
+        self.dem        = lfr.from_gdal(self.inputDir + configuration.dataSettings['dem'], partitionShape)               # DEM map of the study area
         self.dem        = lfr.where(self.dem < 0.1, 35, self.dem)
-        landUse         = lfr.from_gdal(inputDir + configuration.dataSettings['landUseMap'], partitionShape)       # Land-use, example: road
-        soilType        = lfr.from_gdal(inputDir + configuration.dataSettings['soilMap'], partitionShape)             # example: sand or clay
+        landUse         = lfr.from_gdal(self.inputDir + configuration.dataSettings['landUseMap'], partitionShape)       # Land-use, example: road
+        soilType        = lfr.from_gdal(self.inputDir + configuration.dataSettings['soilMap'], partitionShape)             # example: sand or clay
         self.Ks, self.porosity, self.wiltingPoint = dA.get.soil_csv(configuration.generalSettings['inputDir'] + configuration.dataSettings['soilData'], soilType)                                  # soil characteristic
         self.mannings, self.permeability, self.interceptionStorageMax, self.throughfallFraction = \
             dA.get.landCharacteristics_csv(configuration.generalSettings['inputDir'] + configuration.dataSettings['landUseData'],
@@ -62,7 +62,7 @@ class mainModel():
         self.groundWaterBase         = float(configuration.modelSettings['groundWaterBase']) * dG.generate.lue_one()
         
         # self.ldd = lfr.d8_flow_direction(self.dem)
-        self.ldd        = lfr.from_gdal(inputDir + configuration.dataSettings['ldd'], partitionShape)
+        self.ldd        = lfr.from_gdal(self.inputDir + configuration.dataSettings['ldd'], partitionShape)
         
         # Set constants
         self.resolution                 = float(configuration.modelSettings['resolution'])
@@ -75,7 +75,7 @@ class mainModel():
 
         # Load initial groundWaterHeight, if no raster is supplied, use the waterBelowDEM in combination with DEM to create a initialGroundWaterHeight layer.
         try:
-            self.iniGroundWaterHeight   = lfr.from_gdal(inputDir + configuration.dataSettings['iniGroundWaterHeight'], partitionShape)
+            self.iniGroundWaterHeight   = lfr.from_gdal(self.inputDir + configuration.dataSettings['iniGroundWaterHeight'], partitionShape)
             self.iniGroundWaterHeight   = lfr.where(self.iniGroundWaterHeight > self.dem, self.dem - self.waterBelowDEM, self.iniGroundWaterHeight)
         except:
             self.iniGroundWaterHeight   = lfr.where(self.dem > self.groundWaterBase + self.waterBelowDEM, self.dem - self.waterBelowDEM,
@@ -84,13 +84,13 @@ class mainModel():
         
         # Load initial discharge, if no raster is supplied, set to zero.
         try:
-            self.iniDischarge           = lfr.from_gdal(inputDir + configuration.dataSettings['iniDischarge'], partitionShape)
+            self.iniDischarge           = lfr.from_gdal(self.inputDir + configuration.dataSettings['iniDischarge'], partitionShape)
         except:
             self.iniDischarge           = dG.generate.lue_zero()
         
         # Initial InterceptionStorage and groundWaterStorage
         try:
-            self.iniInterceptionStorage = lfr.from_gdal(inputDir + configuration.dataSettings['iniInterceptionStorage'], partitionShape)
+            self.iniInterceptionStorage = lfr.from_gdal(self.inputDir + configuration.dataSettings['iniInterceptionStorage'], partitionShape)
         except:
             self.iniInterceptionStorage = dG.generate.lue_zero()
 
@@ -100,7 +100,11 @@ class mainModel():
     @lfr.runtime_scope
     def dynamicModel(self, configuration):
         dt = int(configuration.modelSettings['iterationsBeforeReport'])
-        dT = int(configuration.modelSettings['reportsBeforeFinished'])
+        sD = list(map(int, configuration.modelSettings['startDate'].split(", ")))
+        eD = list(map(int, configuration.modelSettings['endDate'].split(", ")))
+        startDate   = datetime.datetime(sD[0], sD[1], sD[2], sD[3], sD[4], sD[5])
+        endDate     = datetime.datetime(eD[0], eD[1], eD[2], eD[3], eD[4], eD[5])
+        dT = int((endDate - startDate).seconds / dt)
         
         # Loading initial conditions
         groundWaterHeight   = self.iniGroundWaterHeight
@@ -131,9 +135,6 @@ class mainModel():
         # Static, really small value because inflow = 0 is not accepted
         inflow = dG.generate.lue_one()*0.000000000001
         
-        # Current date
-        date = configuration.modelSettings['startDate']
-        
         # Open file to write maximum discharge values to for post simulation validation.
         with open(self.outputDir + "maximumDischarge.csv", "w", newline="") as f:
             writer = csv.writer(f, delimiter=';')
@@ -141,11 +142,13 @@ class mainModel():
             # Start model for dT large periods
             for i in range(dT):
                 # Time in minutes is the small iteration multiplied with the timestep (both in seconds) divided by 60 seconds.
-                time = int((i * (dt*timestep)/60)) 
+                date = startDate + datetime.timedelta(seconds = i * (dt*timestep)) 
                 
                 # Load flux and storage values
-                precipitation               = dA.get.precipitation(time, self.cellArea, dA.get.apiSession()) # m/s
-                ref_evaporation             = dA.get.pot_evaporation(date, self.cellArea, dA.get.apiSession()) # m/s
+                precipitation               = dA.get.csvData(date, self.cellArea,
+                                                                   configuration.generalSettings['inputDir'] + configuration.dataSettings['precipitationData']) # m/s
+                ref_evaporation             = dA.get.csvData(date, self.cellArea, 
+                                                                     configuration.generalSettings['inputDir'] + configuration.dataSettings['evapotranspirationData']) # m/s
                 interceptionStorage, precipitation, evapotranspirationSurface = \
                                               dA.get.interception(self.cellArea, interceptionStorage, self.interceptionStorageMax, precipitation, \
                                                                   ref_evaporation, self.throughfallFraction)
@@ -207,11 +210,8 @@ class mainModel():
                 print(f"Done: {i+1}/{dT}")
                 variables = {"discharge": discharge, "seepage": seepage, "Qgw": Qgw, "groundWaterHeight": groundWaterHeight, "Sgw": Sgw, "evapoSoil": evapotranspirationSoil, "infiltration": infiltration,
                              "gwFlux": gwFlux, "swFlux": swFlux}
-                dict = {}
-                # Testing for automatic function
-                for var in configuration.reportSettings['variables'].split(", "):
-                    dict[var] = globals()[var]
-                report.dynamic(date, time, dict, self.outputDir)
+
+                report.dynamic(date, timestep, variables, self.outputDir)
         return 0
 
 
