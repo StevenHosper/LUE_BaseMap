@@ -121,7 +121,6 @@ def run(configuration):
     for var in variables:
         raster_pathname = f'{path}/{timestep}_{var}'
         animation_pathname = f'{path}/{var}.gif'
-        print(raster_pathname)
         assert not os.path.splitext(raster_pathname)[1]
         
         vmin = vminDict[var]
