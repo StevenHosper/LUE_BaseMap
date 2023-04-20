@@ -122,13 +122,29 @@ class get():
                 
         return mannings, permeability, interceptionStorageMax, throughfallFraction
     
-    def precipitation(date, cellArea, session):
-        rain = 15 < date < 45
-        return gen.lue_one() * 2 / (1000 * 3600) * int(config.includePrecipitation) * cellArea * int(rain) # Convert to m/s rate
-    
-    def pot_evaporation(date, cellArea, session):
-        pot_evaporation = gen.lue_one() * 3 / 10 / (1000*3600) # Convert from mm/d to m/s 
-        return pot_evaporation * int(config.includeEvaporation) * cellArea
+    def csvData(date, cellArea, dataFile):
+        """
+        Args:
+            date (_type_): Gives the concurrent date of the model.
+            cellArea (_type_): The area of the cell of the model.
+            dataFile (_type_): The file out of which data is to be extracted, should be in mm/h
+
+        Returns:
+            _type_: A lue array with the data in a flux of m/s
+        """
+        roundedDate = get.roundDownDateTime(date)
+        # Convert date to a string
+        dateTime = roundedDate.strftime("%d/%m/%Y %H:%M")
+        
+        # Read the csv and set the index
+        try:
+            data = pd.read_csv(dataFile, sep=",", names=['datetime', 'dataValue'])
+            data.set_index('datetime', inplace=True)
+            dataValue = data.loc[f'{dateTime}']['dataValue']
+        except:
+            dataValue = 0
+        
+        return gen.lue_one() * dataValue / (1000 * 3600) * cellArea # Convert to m/s rate
     
     def interception(cellArea, interceptionStorage, interceptionStorageMax, precipitation, ref_evaporation, throughfallFraction):
         interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception)  
@@ -154,3 +170,9 @@ class get():
         evapotranspirationSurface = lfr.where(enoughWaterE, evapotranspirationSurface, precipitation + discharge/config.dt)
         
         return evapotranspirationSurface, evapotranspirationSoil
+    
+    def roundDownDateTime(dt):
+        deltaMin = dt.minute % 5
+        date = datetime.datetime(dt.year, dt.month, dt.day,
+                                 dt.hour, dt.minute - deltaMin)
+        return date
