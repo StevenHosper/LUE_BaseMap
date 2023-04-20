@@ -156,18 +156,18 @@ class get():
         evapotranspirationSurface = lfr.where(enoughWaterInt, 0, ref_evaporation - (interception + interceptionStorage/config.dt))
         return interceptionStorage, precipitation, evapotranspirationSurface
     
-    def pot_infiltration(Sgw, MaxSgw, cellArea, Ks, permeability, porosity, discharge, precipitation, evapotranspirationSurface):
+    def pot_infiltration(Sgw, MaxSgw, cellArea, Ks, permeability, porosity, height, precipitation, evapotranspirationSurface):
         pot_infiltration = Ks * permeability * int(config.includeInfiltration) # meters that can infiltrate the soil
         pot_infiltration = lfr.where((MaxSgw - Sgw)*porosity < pot_infiltration, \
                                         (MaxSgw - Sgw)*porosity, pot_infiltration) * cellArea   # The amount that can infiltrate because of capacity times the area
-        enoughWaterInf   = discharge/config.dt + precipitation - evapotranspirationSurface > pot_infiltration # If there is more water on the surface available than can infiltrate
-        infiltration     = lfr.where(enoughWaterInf, pot_infiltration, discharge/config.dt + precipitation - evapotranspirationSurface) # Either the pot_infiltration will fully infiltrate
+        enoughWaterInf   = height/config.resolution/config.dt + precipitation - evapotranspirationSurface > pot_infiltration  # If there is more water on the surface available than can infiltrate
+        infiltration     = lfr.where(enoughWaterInf, pot_infiltration, height/config.dt + precipitation - evapotranspirationSurface) # Either the pot_infiltration will fully infiltrate
         return infiltration                                                                                                             # or the available water at the surface will.
     
-    def evapotranspiration(precipitation, evapotranspirationSurface, discharge):
-        enoughWaterE = (precipitation + discharge/config.dt) > evapotranspirationSurface
-        evapotranspirationSoil = lfr.where(enoughWaterE, 0, evapotranspirationSurface - (precipitation + discharge/config.dt))
-        evapotranspirationSurface = lfr.where(enoughWaterE, evapotranspirationSurface, precipitation + discharge/config.dt)
+    def evapotranspiration(precipitation, evapotranspirationSurface, height):
+        enoughWaterE = (precipitation + height/config.resolution/config.dt) > evapotranspirationSurface
+        evapotranspirationSoil = lfr.where(enoughWaterE, 0, evapotranspirationSurface - (precipitation + height/config.resolution/config.dt))
+        evapotranspirationSurface = lfr.where(enoughWaterE, evapotranspirationSurface, precipitation + height/config.resolution/config.dt)
         
         return evapotranspirationSurface, evapotranspirationSoil
     
