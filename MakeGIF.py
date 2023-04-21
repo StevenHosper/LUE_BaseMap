@@ -29,8 +29,8 @@ class makeGIF():
         return np.array(dataset.GetRasterBand(1).ReadAsArray())
 
 
-    def create_animation(raster_pathname, nr_rasters, animation_pathname, vmin, vmax, date):
-        with iio.get_writer(animation_pathname, mode="i", fps=10) as writer:
+    def create_animation(raster_pathname, nr_rasters, animation_pathname, vmin, vmax, date, FPS):
+        with iio.get_writer(animation_pathname, mode="i", fps = FPS) as writer:
             for i in range(nr_rasters + 1):
                 figure, axis = plt.subplots(figsize=(10, 10))
                 axis.set_axis_off()
@@ -88,6 +88,7 @@ def run(configuration):
     startDate   = datetime.datetime(sD[0], sD[1], sD[2], sD[3], sD[4], sD[5])
     nr_rasters  = int(configuration.gifSettings['nrRasters'])
     timestep    = int(configuration.modelSettings['timestep'])
+    fps         = int(configuration.gifSettings['fps'])
     assert nr_rasters >= 0
     
     # Create animations
@@ -99,7 +100,7 @@ def run(configuration):
         vmin = vminDict[var]
         vmax = vmaxDict[var]
         
-        makeGIF.create_animation(raster_pathname, nr_rasters, animation_pathname, vmin, vmax, startDate)
+        makeGIF.create_animation(raster_pathname, nr_rasters, animation_pathname, vmin, vmax, startDate, fps)
 
 
 if __name__ == "__main__":
