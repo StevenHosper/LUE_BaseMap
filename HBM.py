@@ -13,6 +13,7 @@ import sys
 import time
 import csv
 import numpy as np
+import numpy.ma as ma
 
 # Own functions
 # TO-DO: Reformat by the use of: from ... import ... as ...
@@ -178,18 +179,16 @@ class mainModel():
                 gwFlux      = ((infiltrationSurface - evapotranspirationSoil)/self.porosity) + lfr.upstream(gwLDD, Qgw) - Qgw          # Is now in cubic meters
                 swFlux      =  precipitation - evapotranspirationSurface - infiltrationSurface                                         # Is now in cubic meters
                 
-                for j in range(dt):
+                for j in range(1):
                     # The groundwater is adjusted by the fluxes
-                    Sgw         = Sgw + gwFlux                                                                     
+                    infiltrationChannel = lfr.where(height > potInfiltrationChannel, potInfiltrationChannel, height)
+                    Sgw         = Sgw + gwFlux + infiltrationChannel                                                                    
                     
                     # If the groundwater table surpases the digital elevation map, groundwater is turned into runoff.
                     seepage     = lfr.where(Sgw > MaxSgw, (Sgw - MaxSgw)*self.porosity, 0)
                     
                     # Discharge is affected by the surfacewater fluxes, and seepage is added
-                    height   = height + (swFlux + seepage)/channelArea
-                    infiltrationChannel = lfr.where(height > potInfiltrationChannel, potInfiltrationChannel, height)
-                    height = height - infiltrationChannel
-                    Sgw    = Sgw + infiltrationChannel/self.porosity
+                    height   = height + (swFlux + seepage)/channelArea - infiltrationChannel
                     
                     discharge = lfr.pow(height, 1.6666666667) / coefficient
                     
