@@ -57,6 +57,13 @@ class generate():
                                 fill_value = 1,
                             )
 
+    def lue_one_int():
+        return lfr.create_array(config.arrayShape,
+                                config.partitionShape,
+                                dtype = np.dtype(np.uint8),
+                                fill_value = 1,
+                            )
+
     def lue_sink():
         return lfr.create_array(config.arrayShape,
                                 config.partitionShape,
