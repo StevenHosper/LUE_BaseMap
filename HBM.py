@@ -179,7 +179,7 @@ class mainModel():
                 gwFlux      = ((infiltrationSurface - evapotranspirationSoil)/self.porosity) + lfr.upstream(gwLDD, Qgw) - Qgw          # Is now in cubic meters
                 swFlux      =  precipitation - evapotranspirationSurface - infiltrationSurface                                         # Is now in cubic meters
                 
-                for j in range(1):
+                for j in range(dt):
                     # The groundwater is adjusted by the fluxes
                     infiltrationChannel = lfr.where(height > potInfiltrationChannel, potInfiltrationChannel, height)
                     Sgw         = Sgw + gwFlux + infiltrationChannel                                                                    
