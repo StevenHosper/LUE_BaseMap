@@ -31,8 +31,8 @@ discharge.head()
 plt.style.use('default')
 discharge[['Discharge', f'EWMA{x}']].plot(label='Discharge',
                                           figsize=(16,8))
-plt.axvline(900, color = 'r')
-plt.axvline(2700, color = 'r')
+#plt.axvline(900, color = 'r')
+#plt.axvline(2700, color = 'r')
 #plt.axvline(2700, color = 'g')
 #plt.axvline(3600, color = 'g')
 
