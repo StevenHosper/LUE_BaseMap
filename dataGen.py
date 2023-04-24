@@ -46,14 +46,14 @@ class generate():
     def lue_zero():
         return lfr.create_array(config.arrayShape,
                                 config.partitionShape,
-                                dtype = np.dtype(np.float32),
+                                dtype = np.dtype(np.float64),
                                 fill_value = 0,
                                 )
     
     def lue_one():
         return lfr.create_array(config.arrayShape,
                                 config.partitionShape,
-                                dtype = np.dtype(np.float32),
+                                dtype = np.dtype(np.float64),
                                 fill_value = 1,
                             )
 
@@ -76,7 +76,7 @@ class generate():
         Create a random uniform map, able to function as a Digital Elevation Map and sade it in the \
         generated data directory.
         """
-        dem = lfr.uniform(self.lue_zero(), np.float32, 0, 1)
+        dem = lfr.uniform(self.lue_zero(), np.float64, 0, 1)
         lfr.to_gdal(dem, f'{self.path}{output_name}_{config.arrayExtent}.tiff')
         return dem
     
@@ -94,7 +94,7 @@ class generate():
         Assign $% of the cells to become rain producing cells.
         """
         fraction_raincells = 0.05                                           # Determine the percentage of raincells in the array
-        raincells = lfr.uniform(generate.lue_zero(), np.float32, 0, 1) <= fraction_raincells
+        raincells = lfr.uniform(generate.lue_zero(), np.float64, 0, 1) <= fraction_raincells
         return raincells
     
     def precipitation(self, raincells):
@@ -118,7 +118,7 @@ class generate():
         lRain = nr_raincells_nearby > 3
         
         random = max(0, np.random.randint(0, 20) - 10)
-        rain_value = lfr.uniform(generate.lue_zero(), np.float32, 0, 0.15)
+        rain_value = lfr.uniform(generate.lue_zero(), np.float64, 0, 0.15)
         
         rain = lfr.where(sRain, rain_value, 0)
         rain = lfr.where(mRain, rain_value*2, rain)
@@ -158,8 +158,8 @@ class generate():
         evaporation = evaporation / 1000                                                        # convert to m / day
         evaporation = lfr.create_array(config.arrayShape,
                                        config.partitionShape,
-                                       dtype = np.float32,
-                                       fill_value = np.float32(evaporation),
+                                       dtype = np.float64,
+                                       fill_value = np.float64(evaporation),
                                        )
         return evaporation
     
@@ -200,7 +200,7 @@ class generate():
                 temperature = self.temp(temperature)
                 temperature_2d = lfr.create_array(config.arrayShape,
                                            config.partitionShape,
-                                           dtype = np.float32,
+                                           dtype = np.float64,
                                            fill_value = temperature)
                 
                 if config.saveTemp:             # IF the temperature should be saved, save the temperature.
@@ -217,23 +217,23 @@ class generate():
 
     def unitTest():
         # Create a random height map
-        dem = np.random.randn(config.arrayExtent, config.arrayExtent).astype(np.float32)
+        dem = np.random.randn(config.arrayExtent, config.arrayExtent).astype(np.float64)
         
         # Create two soil types, split in the middle
         soilType = np.array([[1,1,1,1,1,0,0,0,0,0],
-                             [1,1,1,1,1,0,0,0,0,0]], dtype= np.float32)
+                             [1,1,1,1,1,0,0,0,0,0]], dtype= np.float64)
         soilType = np.repeat(soilType, 5, axis=0)
         
         s, c = [0.01, 0.001]                           # Saturated hydraulic conductivity for sand and clay respectively.
         Ks = np.array([[s,s,s,s,s,c,c,c,c,c],
-                       [s,s,s,s,s,c,c,c,c,c]], dtype= np.float32)
+                       [s,s,s,s,s,c,c,c,c,c]], dtype= np.float64)
         Ks = np.repeat(Ks, 5, axis=0)
         
         # Create precipitation
-        precipitation = np.full(config.arrayShape, fill_value=1, dtype=np.float32)
+        precipitation = np.full(config.arrayShape, fill_value=1, dtype=np.float64)
         
         # Create evaporation
-        evaporation = np.full(config.arrayShape, fill_value=0.25, dtype=np.float32)
+        evaporation = np.full(config.arrayShape, fill_value=0.25, dtype=np.float64)
         
         # Create land-use types
         f, w, r, h = [1.2, 1, 0.02, 0.001]              # Land-use coefficients for field, water, road and houses.
@@ -241,7 +241,7 @@ class generate():
                             [f,f,f,f,w,r,r,f,f,h],
                             [f,f,f,f,w,r,r,f,f,f],
                             [f,f,f,w,f,r,r,f,f,f],
-                            [f,f,w,f,f,r,r,f,h,h]], dtype=np.float32)
+                            [f,f,w,f,f,r,r,f,h,h]], dtype=np.float64)
         landUseC = np.repeat(landUseC, 2, axis=0)
         
         infiltration = Ks * landUseC

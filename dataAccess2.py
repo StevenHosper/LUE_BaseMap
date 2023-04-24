@@ -72,7 +72,7 @@ class get():
         # Assign a memory file to store the api content
         input_mem_file = f"/vsimem/input_{uid.uuid4()}.tif"
         output_mem_file = f"/vsimem/output_{uid.uuid4()}.tif"
-        options = gdal.TranslateOptions(outputType= gdal.GDT_Float32)
+        options = gdal.TranslateOptions(outputType= gdal.GDT_Float64)
         gdal.FileFromMemBuffer(input_mem_file, pull.content)
         gdal.Translate(output_mem_file, input_mem_file, options = options)
         
@@ -156,7 +156,7 @@ class get():
         evapotranspirationSurface = lfr.where(enoughWaterInt, 0, ref_evaporation - (interception + interceptionStorage/config.dt))
         return interceptionStorage, precipitation, evapotranspirationSurface
     
-    def infiltration(Sgw, MaxSgw, cellArea, Ks, permeability, porosity, height, precipitation, evapotranspirationSurface):
+    def infiltration(Sgw, MaxSgw, cellArea, Ks, permeability, porosity, precipitation, evapotranspirationSurface):
         potInfiltration = Ks * permeability * int(config.includeInfiltration) # meters that can infiltrate the soil
         potInfiltration = lfr.where(((MaxSgw - Sgw)/cellArea)*porosity < potInfiltration, \
                                         ((MaxSgw - Sgw)/cellArea)*porosity, potInfiltration)   # The amount that can infiltrate because of capacity times the area

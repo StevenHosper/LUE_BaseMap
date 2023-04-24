@@ -100,7 +100,7 @@ class mainModel():
             self.iniInterceptionStorage = dG.generate.lue_zero()
 
         self.iniGroundWaterStorage  = (self.iniGroundWaterHeight - (self.impermeableLayerHeight)) * self.cellArea
-        print("\n\n\n")
+        print("\n")
         
 
     @lfr.runtime_scope
@@ -133,6 +133,7 @@ class mainModel():
         # Channel length and area
         channelLength       = self.resolution * dG.generate.lue_one()
         channelArea         = width * channelLength
+        channelRatio        = channelArea / self.cellArea
         
         # Kinematic Surface Water Routing Constants
         alpha       = 1.5
@@ -162,8 +163,10 @@ class mainModel():
                 evapotranspirationSurface, evapotranspirationSoil = \
                                               dA.get.evapotranspiration(precipitation, evapotranspirationSurface)
                 infiltrationSurface, potInfiltrationChannel       = dA.get.infiltration(Sgw, MaxSgw, self.cellArea, self.Ks, self.permeability, self.porosity, \
-                                                                                            height, precipitation, evapotranspirationSurface)
-
+                                                                                            precipitation, evapotranspirationSurface)
+                
+                # The infiltration happens only in the region that is used by the channel and therefore this factor should be accounted for
+                potInfiltrationChannel = potInfiltrationChannel * channelRatio
 
                 # Groundwater LDD, gradient and flow flux
                 gwLDD       = lfr.d8_flow_direction(groundWaterHeight)
@@ -182,7 +185,7 @@ class mainModel():
                 for j in range(dt):
                     # The groundwater is adjusted by the fluxes
                     infiltrationChannel = lfr.where(height > potInfiltrationChannel, potInfiltrationChannel, height)
-                    Sgw         = Sgw + gwFlux + infiltrationChannel                                                                    
+                    Sgw         = Sgw + gwFlux + infiltrationChannel/self.porosity                                                                   
                     
                     # If the groundwater table surpases the digital elevation map, groundwater is turned into runoff.
                     seepage     = lfr.where(Sgw > MaxSgw, (Sgw - MaxSgw)*self.porosity, 0)
@@ -217,8 +220,8 @@ class mainModel():
                 
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
-                variables = {"discharge": discharge, "seepage": seepage, "Qgw": Qgw, "Sgw": Sgw, "evapoSoil": evapotranspirationSoil, "infiltrationSurface": infiltrationSurface,
-                             "potInfiltrationChannel": potInfiltrationChannel, "infiltrationChannel": infiltrationChannel, "gwFlux": gwFlux, "swFlux": swFlux, "interceptionStorage": interceptionStorage}
+                variables = {"discharge": discharge, "seepage": seepage, "Qgw": Qgw, "Sgw": Sgw,
+                             "infiltrationChannel": infiltrationChannel, "gwFlux": gwFlux, "interceptionStorage": interceptionStorage}
 
                 report.dynamic(date, timestep, variables, self.outputDir)
         return 0
