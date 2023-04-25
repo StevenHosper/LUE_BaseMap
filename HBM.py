@@ -87,10 +87,10 @@ class mainModel():
         
         # Load initial discharge, if no raster is supplied, set to zero.
         try:
-            self.iniDischarge           = lfr.from_gdal(self.inputDir + configuration.dataSettings['iniDischarge'], partitionShape)
+            self.iniWaterHeight           = lfr.from_gdal(self.inputDir + configuration.dataSettings['iniWaterHeight'], partitionShape)
         except:
-            print("Did not find a initial discharge file, looked at: {}".format(configuration.dataSettings['iniDischarge']))
-            self.iniDischarge           = dG.generate.lue_zero()
+            print("Did not find a initial discharge file, looked at: {}".format(configuration.dataSettings['iniWaterHeight']))
+            self.iniWaterHeight           = dG.generate.lue_zero()
         
         # Initial InterceptionStorage and groundWaterStorage
         try:
@@ -114,7 +114,7 @@ class mainModel():
         
         # Loading initial conditions
         groundWaterHeight   = self.iniGroundWaterHeight
-        discharge           = self.iniDischarge
+        height              = self.iniWaterHeight
         Sgw                 = self.iniGroundWaterStorage
         interceptionStorage = self.iniInterceptionStorage
         
@@ -128,7 +128,6 @@ class mainModel():
         sqrtSlope           = lfr.where(sqrtSlope > 0.05, 0.05, sqrtSlope)
         width               = 1
         coefficient         = self.mannings / (sqrtSlope * width)
-        height              = height = lfr.pow(coefficient*discharge, 0.6)
         
         # Channel length and area
         channelLength       = self.resolution * dG.generate.lue_one()
@@ -166,7 +165,7 @@ class mainModel():
                                                                                             precipitation, evapotranspirationSurface)
                 
                 # The infiltration happens only in the region that is used by the channel and therefore this factor should be accounted for
-                potInfiltrationChannel = potInfiltrationChannel * channelRatio
+                potInfiltrationChannel = potInfiltrationChannel * channelRatio  # is in m/s
 
                 # Groundwater LDD, gradient and flow flux
                 gwLDD       = lfr.d8_flow_direction(groundWaterHeight)
@@ -185,18 +184,18 @@ class mainModel():
                 for j in range(dt):
                     # The groundwater is adjusted by the fluxes
                     infiltrationChannel = lfr.where(height > potInfiltrationChannel, potInfiltrationChannel, height)
-                    Sgw         = Sgw + gwFlux + infiltrationChannel/self.porosity                                                                   
+                    Sgw         = Sgw + gwFlux + (infiltrationChannel*channelArea)/self.porosity                                                                  
                     
                     # If the groundwater table surpases the digital elevation map, groundwater is turned into runoff.
                     seepage     = lfr.where(Sgw > MaxSgw, (Sgw - MaxSgw)*self.porosity, 0)
                     
                     # Discharge is affected by the surfacewater fluxes, and seepage is added
-                    height   = height + (swFlux + seepage)/channelArea - infiltrationChannel
+                    height   = height + ((swFlux + seepage)/channelArea) - infiltrationChannel
                     
-                    discharge = lfr.pow(height, 1.6666666667) / coefficient
+                    discharge = lfr.pow(height, 5/3) / coefficient
                     
                     # Because the kinematic wave has difficulties working with zero's, we have opted for a very small value. This will impact model results.
-                    discharge   = lfr.where(discharge < 0.000000000001, 0.000000000001, discharge)
+                    discharge   = lfr.where(discharge < 1E-20, 1E-20, discharge)
 
                     # Water routing based on the kinematic wave function, currently alpha is a float. Hopefully mannings raster can be used in the future.
                     discharge           = lfr.kinematic_wave(self.ldd, discharge, inflow,\
@@ -220,10 +219,10 @@ class mainModel():
                 
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
-                variables = {"discharge": discharge, "seepage": seepage, "Qgw": Qgw, "Sgw": Sgw,
-                             "infiltrationChannel": infiltrationChannel, "gwFlux": gwFlux, "interceptionStorage": interceptionStorage}
+                variables = {"discharge": discharge, "seepage": seepage, "Qgw": Qgw, "Sgw": Sgw, "infiltrationSurface": infiltrationSurface, "precipitation": precipitation,
+                             "infiltrationChannel": infiltrationChannel, "gwFlux": gwFlux, "interceptionStorage": interceptionStorage, "height": height, "evapoSoil": evapotranspirationSoil, "swFlux": swFlux, "outflow": outflow}
 
-                report.dynamic(date, timestep, variables, self.outputDir)
+                report.dynamic(date, timestep, variables, self.outputDir)   
         return 0
 
 
@@ -254,7 +253,8 @@ if lfr.on_root_locality():
     configuration = Configuration("F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/config.ini")
     main = mainModel(configuration)
     main.dynamicModel(configuration)
-
+    report.balanceReport(configuration)  
+    
     # Process the results into a gif
     if configuration.generalSettings['makeGIF'] == 'True':
         print(f"Creating a GIF for: {configuration.gifSettings['variables']}.")
