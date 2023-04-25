@@ -144,25 +144,28 @@ class get():
         except:
             dataValue = 0
         
-        return gen.lue_one() * dataValue / (1000 * 3600) * cellArea # Convert to m/s rate
+        return gen.lue_one() * (dataValue / (1000 * 3600)) * cellArea  # Convert to m3/s rate
     
     def interception(cellArea, interceptionStorage, interceptionStorageMax, precipitation, ref_evaporation, throughfallFraction):
-        interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception)  
-        interception = lfr.where(interceptionStorageMax < interceptionStorage + interception * config.dt, \
-                                (interceptionStorageMax - interceptionStorage)/config.dt, interception)
-        precipitation = precipitation - interception
-        enoughWaterInt = (interception + interceptionStorage/config.dt) > ref_evaporation
-        interceptionStorage = lfr.where(enoughWaterInt, interceptionStorage + interception*config.dt - ref_evaporation*config.dt, 0)
+        interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception)
+        
+        enoughWaterInt = (interception + interceptionStorage/config.dt) > ref_evaporation  
+
+        interceptionStorage = lfr.where(enoughWaterInt, interceptionStorage + (interception - ref_evaporation) * config.dt, 0)
+        
+        interceptionStorageSurplus = lfr.where(interceptionStorage > interceptionStorageMax, interceptionStorage - interceptionStorageMax, 0)
+        precipitation = precipitation - interception + (interceptionStorageSurplus/config.dt)
+        
         evapotranspirationSurface = lfr.where(enoughWaterInt, 0, ref_evaporation - (interception + interceptionStorage/config.dt))
         return interceptionStorage, precipitation, evapotranspirationSurface
     
     def infiltration(Sgw, MaxSgw, cellArea, Ks, permeability, porosity, precipitation, evapotranspirationSurface):
         potInfiltration = Ks * permeability * int(config.includeInfiltration) # meters that can infiltrate the soil
         potInfiltration = lfr.where(((MaxSgw - Sgw)/cellArea)*porosity < potInfiltration, \
-                                        ((MaxSgw - Sgw)/cellArea)*porosity, potInfiltration)   # The amount that can infiltrate because of capacity times the area
-        enoughWaterInf   = precipitation - evapotranspirationSurface > potInfiltration  # If there is more water on the surface available than can infiltrate
+                                        ((MaxSgw - Sgw)/cellArea)*porosity, potInfiltration) * cellArea     # The amount that can infiltrate because of capacity times the area
+        enoughWaterInf   = precipitation - evapotranspirationSurface > potInfiltration                      # If there is more water on the surface available than can infiltrate
         infiltrationSurface = lfr.where(enoughWaterInf, potInfiltration, precipitation - evapotranspirationSurface) # Either the potInfiltration will fully infiltrate
-        potInfiltrationChannel = lfr.where(enoughWaterInf, 0, potInfiltration - infiltrationSurface)
+        potInfiltrationChannel = lfr.where(enoughWaterInf, 0, potInfiltration - infiltrationSurface) / cellArea
         return infiltrationSurface, potInfiltrationChannel                                                          # or the available water at the surface will.
     
     def evapotranspiration(precipitation, evapotranspirationSurface):
