@@ -220,7 +220,7 @@ class mainModel():
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
                 variables = {"discharge": discharge, "seepage": seepage, "Qgw": Qgw, "Sgw": Sgw, "infiltrationSurface": infiltrationSurface, "precipitation": precipitation,
-                             "infiltrationChannel": infiltrationChannel, "gwFlux": gwFlux, "interceptionStorage": interceptionStorage, "height": height, "evapoSoil": evapotranspirationSoil, "swFlux": swFlux, "outflow": outflow}
+                             "infiltrationChannel": infiltrationChannel, "gwFlux": gwFlux, "interceptionStorage": interceptionStorage, "height": height, "evapoSoil": evapotranspirationSoil, "swFlux": swFlux}
 
                 report.dynamic(date, timestep, variables, self.outputDir)   
         return 0
