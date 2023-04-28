@@ -24,8 +24,8 @@ class report():
         
         p = pd.read_csv(configuration.generalSettings["inputDir"] + configuration.dataSettings["precipitationData"], names=["date", "p"])
         e = pd.read_csv(configuration.generalSettings["inputDir"] + configuration.dataSettings["evapotranspirationData"], names=["date", "e"])
-        startIDX = 2
-        endIDX   = 8
+        startIDX = 3
+        endIDX   = 123
         meanPrecipitation = p.p[startIDX:endIDX].mean()
         meanEvapotranspiration = e.e[startIDX:endIDX].mean()
         print(meanPrecipitation)
@@ -47,30 +47,32 @@ class report():
         cellArea   = resolution ** 2
         
         delSurStor = (endSurStor - iniSurStor) * resolution
-        delGroStor = report.tiff2npsumdifference(endGroStor, iniGroStor) * configuration.modelSettings["porosity"]
+        delGroStor = report.tiff2npsumdifference(endGroStor, iniGroStor) * float(configuration.modelSettings["porosity"])
         delIntStor = (endIntStor - iniIntStor)
         netBalance = delSurStor + delIntStor + delGroStor
         precipitation       = (((endIDX - startIDX) / 12) * meanPrecipitation) / 1000 * cellArea * (int(configuration.modelSettings["arrayExtent"]) ** 2) * (float(configuration.modelSettings["validCellsPercentage"]))/100
         evapotranspiration  = (((endIDX - startIDX) / 12) * meanEvapotranspiration) / 1000 * cellArea * (int(configuration.modelSettings["arrayExtent"]) ** 2) * (float(configuration.modelSettings["validCellsPercentage"]))/100
         atmosphericBalance = precipitation - evapotranspiration
         
-        print("Total Precipitation: ", precipitation, "m3")
-        print("Total Evapotranspiration: ", evapotranspiration, "m3")
-        print("Atmospheric balance: ", atmosphericBalance, "m3 \n")
+        print("Total Precipitation:         ", precipitation, "m3")
+        print("Total Evapotranspiration:    ", evapotranspiration, "m3")
+        print("Atmospheric balance:         ", atmosphericBalance, "m3 \n")
         
-        print("iniTotalSurfaceHeight: ", iniSurStor * resolution, "m3")
-        print("endTotalSurfaceHeight: ", endSurStor * resolution, "m3")
-        print("delta Surface Storage: ", delSurStor, "m3 \n")
+        print("iniTotalSurfaceHeight:       ", iniSurStor * resolution, "m3")
+        print("endTotalSurfaceHeight:       ", endSurStor * resolution, "m3")
+        print("delta Surface Storage:       ", delSurStor, "m3 \n")
         
-        print("delta GroundWater Storage: ", delGroStor, "m3 \n")
+        print("delta GroundWater Storage:   ", delGroStor, "m3 \n")
         
         print("iniTotalInterceptionStorage: ", iniIntStor, "m3")
         print("endTotalInterceptionStorage: ", endIntStor, "m3")
-        print("delta Interception Storage: ", delIntStor, " m3 \n")
+        print("delta Interception Storage:  ", delIntStor, " m3 \n")
         
-        print("storage balance: ", netBalance, "m3")
+        print("storage balance:             ", netBalance, "m3 \n")
         
-        print("expected loss to outflow: ", (netBalance - atmosphericBalance)/(29*60), "m3/s \n")
+        print("del atmos and storage:       ", atmosphericBalance - netBalance, "m3")
+        print("time simulated:              ", (endIDX-startIDX)*5*60, "s")
+        print("expected loss to outflow:    ", (netBalance - atmosphericBalance)/((endIDX-startIDX)*5*60), "m3/s \n")
         
         return 0
     
