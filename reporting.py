@@ -22,19 +22,30 @@ class report():
     def balanceReport(configuration):
         dir = configuration.generalSettings["outputDir"] + configuration.generalSettings["scenario"]
         
-        p = pd.read_csv(configuration.generalSettings["inputDir"] + configuration.dataSettings["precipitationData"], names=["date", "p"])
-        e = pd.read_csv(configuration.generalSettings["inputDir"] + configuration.dataSettings["evapotranspirationData"], names=["date", "e"])
-        startIDX = 3
-        endIDX   = 123
-        meanPrecipitation = p.p[startIDX:endIDX].mean()
-        meanEvapotranspiration = e.e[startIDX:endIDX].mean()
-        print(meanPrecipitation)
-        
         sD = list(map(int, configuration.modelSettings['startDate'].split(", ")))
         eD   = list(map(int, configuration.modelSettings['endDate'].split(", ")))
         startDate   = datetime.datetime(sD[0], sD[1], sD[2], sD[3], sD[4], sD[5])
-        endDate     = datetime.datetime(eD[0], eD[1], eD[2], eD[3], eD[4], eD[5]) - datetime.timedelta(minutes=1)
+        endDate     = datetime.datetime(eD[0], eD[1], eD[2], eD[3], eD[4], eD[5])
+        startDateTxt= startDate.strftime("%d/%m/%Y %H:%M")
+        endDateTxt  = endDate.strftime("%d/%m/%Y %H:%M")
         
+        if configuration.generalSettings['includePrecipitation'] == "True":
+            p = pd.read_csv(configuration.generalSettings["inputDir"] + configuration.dataSettings["precipitationData"], names=["date", "p"])
+            startIDX= p.index[p["date"] == startDateTxt].tolist()
+            endIDX  = p.index[p["date"] == endDateTxt].tolist()
+            meanPrecipitation = p.p[startIDX:endIDX-1].mean()
+        else:
+            meanPrecipitation = 0
+        
+        if configuration.generalSettings['includeEvapotranspiration'] == "True":
+            e = pd.read_csv(configuration.generalSettings["inputDir"] + configuration.dataSettings["evapotranspirationData"], names=["date", "e"])
+            startIDX= e.index[e["date"] == startDateTxt].tolist()[0]
+            endIDX  = e.index[e["date"] == endDateTxt].tolist()[0]
+            meanEvapotranspiration = e.e[startIDX:endIDX-1].mean()
+        else:
+            meanEvapotranspiration = 0
+        
+        endDate = endDate - datetime.timedelta(minutes=1)
         
         iniSurStor = report.tiff2npsum(dir + "/{}_height_{}.tiff".format(int(configuration.modelSettings["timestep"]), startDate.strftime("%Y-%m-%d-%H%M")))
         iniGroStor = dir + "/{}_Sgw_{}.tiff".format(int(configuration.modelSettings["timestep"]), startDate.strftime("%Y-%m-%d-%H%M"))
