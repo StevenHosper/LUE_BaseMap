@@ -11,9 +11,10 @@ import requests
 import datetime
 import math as math
 import configuration as config
+import configuration_v2
 
 class generate(): 
-    def __init__(self):
+    def __init__(self, configuration):
         """
         The initial calculation phase. Get API access for this session and interpret command line arguments.
         
@@ -29,64 +30,61 @@ class generate():
                           'Content-Type': 'application/json',
                           }
         
-        
-        print(f'partition: {config.partitionShape}', f'array: {config.arrayShape}')
-        
-        self.path = f'{config.path}/data/generated/{config.arrayExtent}/'
+        self.path = "{}/generated/{}/".format(configuration.generalSettings['inputDir'], configuration.modelSettings['arrayExtent'])
         
         print("__init__ done")
     
-    def boundaryCell():
-        array = np.ones((config.arrayExtent - 2, config.arrayExtent - 2), dtype= np.uint8)
+    def boundaryCell(configuration):
+        array = np.ones(int(configuration.modelSettings['arrayExtent']) - 2, int(configuration.modelSettings['arrayExtent'] - 2), dtype= np.uint8)
         boundaryCell = np.pad(array, pad_width=1, mode='constant', constant_values=0)
-        boundaryCell = lfr.from_numpy(boundaryCell, config.partitionShape)
-        # lfr.to_gdal(boundaryCell, config.path + 'boundaryCell.tiff')
+        boundaryCell = lfr.from_numpy(boundaryCell, 2*(configuration.modelSettings['partitionExtent'],))
+        lfr.to_gdal(boundaryCell, configuration.generalSettings['outputDir'] + '/boundaryCell.tiff')
         return boundaryCell
     
-    def lue_zero():
-        return lfr.create_array(config.arrayShape,
-                                config.partitionShape,
+    def lue_zero(configuration):
+        return lfr.create_array(2*(configuration.modelSettings['arrayExtent'],),
+                                2*(configuration.modelSettings['partitionExtent'],),
                                 dtype = np.dtype(np.float64),
                                 fill_value = 0,
                                 )
     
-    def lue_one():
-        return lfr.create_array(config.arrayShape,
-                                config.partitionShape,
+    def lue_one(configuration):
+        return lfr.create_array(2*(configuration.modelSettings['arrayExtent'],),
+                                2*(configuration.modelSettings['partitionExtent'],),
                                 dtype = np.dtype(np.float64),
                                 fill_value = 1,
-                            )
+                                )
 
-    def lue_one_int():
-        return lfr.create_array(config.arrayShape,
-                                config.partitionShape,
+    def lue_one_int(configuration):
+        return lfr.create_array(2*(configuration.modelSettings['arrayExtent'],),
+                                2*(configuration.modelSettings['partitionExtent'],),
                                 dtype = np.dtype(np.uint8),
                                 fill_value = 1,
-                            )
+                                )
 
-    def lue_sink():
-        return lfr.create_array(config.arrayShape,
-                                config.partitionShape,
+    def lue_sink(configuration):
+        return lfr.create_array(2*(configuration.modelSettings['arrayExtent'],),
+                                2*(configuration.modelSettings['partitionExtent'],),
                                 dtype = np.dtype(np.uint8),
                                 fill_value = 5,
                                 )
     
-    def dem(self, output_name):
+    def dem(self, configuration, output_name):
         """
         Create a random uniform map, able to function as a Digital Elevation Map and sade it in the \
         generated data directory.
         """
         dem = lfr.uniform(self.lue_zero(), np.float64, 0, 1)
-        lfr.to_gdal(dem, f'{self.path}{output_name}_{config.arrayExtent}.tiff')
+        lfr.to_gdal(dem, "{}{}_{}.tiff".format(self.path, output_name, configuration.modelSettings['arrayExtent']))
         return dem
     
-    def ldd(self, dem, output_name):
+    def ldd(self, configuration, dem, output_name):
         """
         Create a local drain direction map based on the dem given and safe it to a tiff file in the generated \
         data directory.
         """
         ldd = lfr.d8_flow_direction(dem)
-        lfr.to_gdal(ldd, f'{self.path}{output_name}_{config.arrayExtent}.tiff')
+        lfr.to_gdal(ldd, "{}{}_{}.tiff".format(self.path, output_name, configuration.modelSettings['arrayExtent']))
         return ldd 
      
     def initialize_raincells(self):
@@ -139,7 +137,7 @@ class generate():
         
         return temperature
         
-    def pet_Hamon(self, temperature, date):
+    def pet_Hamon(self, configuration, temperature, date):
         """
         Simulates the potential evaporation based on parameters supplied.
         As of yet only takes the temperature into account, makes sure that any temperature \
@@ -156,17 +154,17 @@ class generate():
         saturated_vapor_pressure = 6.108*math.e**((17.27*temperature)/(temperature + K))        # calculate saturated vapor pressure
         evaporation = k * 0.165 * 216.7 * N * (saturated_vapor_pressure / (temperature + K))    # calculate the evaporation rate in mm / day
         evaporation = evaporation / 1000                                                        # convert to m / day
-        evaporation = lfr.create_array(config.arrayShape,
-                                       config.partitionShape,
-                                       dtype = np.float64,
-                                       fill_value = np.float64(evaporation),
-                                       )
+        evaporation = lfr.create_array(2*(configuration.modelSettings['arrayExtent'],),
+                                2*(configuration.modelSettings['partitionExtent'],),
+                                dtype = np.dtype(np.float64),
+                                fill_value = np.float64(evaporation),
+                                )
         return evaporation
     
      
     @lfr.runtime_scope 
-    def simulate(self):
-        if config.generateDEM:
+    def simulate(self, configuration):
+        if configuration.generateDEM:
             dem = self.dem("dem")
             ldd = self.ldd(dem, "ldd")
         
@@ -176,48 +174,48 @@ class generate():
         
         
         # Calculate the amount of rainfall and precipitation for each of the days in the timeperiod
-        for i in range(int((config.endDate - config.startDate).days) + 1):
+        for i in range(int((configuration.endDate - configuration.startDate).days) + 1):
             print(f'Generating data for day {i + 1}.')
-            date = config.startDate + datetime.timedelta(i)
+            date = configuration.startDate + datetime.timedelta(i)
             print(date)
             # Rainfall generation per day
-            if config.generatePrecip:
+            if configuration.generatePrecip:
                 if i < 5:
                     rain = self.precipitation(raincells)
-                    lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
+                    lfr.to_gdal(rain, f'{self.path}precipitation_{configuration.arrayExtent}_{date}.tiff')
                 elif 12 > i > 8:
                     rain = self.precipitation(raincells)
-                    lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
+                    lfr.to_gdal(rain, f'{self.path}precipitation_{configuration.arrayExtent}_{date}.tiff')
                 elif 23 > i > 18:
                     rain = self.precipitation(raincells)
-                    lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
+                    lfr.to_gdal(rain, f'{self.path}precipitation_{configuration.arrayExtent}_{date}.tiff')
                 else:
                     rain = generate.lue_zero()
-                    lfr.to_gdal(rain, f'{self.path}precipitation_{config.arrayExtent}_{date}.tiff')
+                    lfr.to_gdal(rain, f'{self.path}precipitation_{configuration.arrayExtent}_{date}.tiff')
             
-            if config.generateEvapo:
+            if configuration.generateEvapo:
                 # First generate the temperature
                 temperature = self.temp(temperature)
-                temperature_2d = lfr.create_array(config.arrayShape,
-                                           config.partitionShape,
+                temperature_2d = lfr.create_array(2 * (configuration.modelSettings['arrayExtent'],),
+                                           configuration.partitionShape,
                                            dtype = np.float64,
                                            fill_value = temperature)
                 
-                if config.saveTemp:             # IF the temperature should be saved, save the temperature.
-                    lfr.to_gdal(temperature_2d, f'{self.path}temperature_{config.arrayExtent}_{date}.tiff')
+                if configuration.saveTemp:             # IF the temperature should be saved, save the temperature.
+                    lfr.to_gdal(temperature_2d, f'{self.path}temperature_{configuration.arrayExtent}_{date}.tiff')
                 
                 # Generature the evaporation based on the temperature and save it.
                 evaporation = self.pet_Hamon(temperature, date)
-                lfr.to_gdal(evaporation, f'{self.path}potential_evaporation_{config.arrayExtent}_{date}.tiff')
+                lfr.to_gdal(evaporation, f'{self.path}potential_evaporation_{configuration.arrayExtent}_{date}.tiff')
             
             # To the next day!
             date = date + datetime.timedelta(days=1)
         
         return 0
 
-    def unitTest():
+    def unitTest(configuration):
         # Create a random height map
-        dem = np.random.randn(config.arrayExtent, config.arrayExtent).astype(np.float64)
+        dem = np.random.randn(configuration.arrayExtent, configuration.arrayExtent).astype(np.float64)
         
         # Create two soil types, split in the middle
         soilType = np.array([[1,1,1,1,1,0,0,0,0,0],
@@ -230,10 +228,10 @@ class generate():
         Ks = np.repeat(Ks, 5, axis=0)
         
         # Create precipitation
-        precipitation = np.full(config.arrayShape, fill_value=1, dtype=np.float64)
+        precipitation = np.full(2 * (configuration.modelSettings['arrayExtent'],), fill_value=1, dtype=np.float64)
         
         # Create evaporation
-        evaporation = np.full(config.arrayShape, fill_value=0.25, dtype=np.float64)
+        evaporation = np.full(2 * (configuration.modelSettings['arrayExtent'],), fill_value=0.25, dtype=np.float64)
         
         # Create land-use types
         f, w, r, h = [1.2, 1, 0.02, 0.001]              # Land-use coefficients for field, water, road and houses.
@@ -247,9 +245,9 @@ class generate():
         infiltration = Ks * landUseC
         
         # Report all important variables for use in the model
-        precipitation_lue = lfr.from_numpy(precipitation, config.partitionShape)
-        evaporation_lue   = lfr.from_numpy(evaporation, config.partitionShape)
-        infiltration_lue  = lfr.from_numpy(infiltration, config.partitionShape)
+        precipitation_lue = lfr.from_numpy(precipitation, configuration.partitionShape)
+        evaporation_lue   = lfr.from_numpy(evaporation, configuration.partitionShape)
+        infiltration_lue  = lfr.from_numpy(infiltration, configuration.partitionShape)
         
         return 0
         
@@ -277,8 +275,9 @@ lfr.start_hpx_runtime(cfg)
 # localities. Never perform Python code on the other localities than the
 # root locality unless you know what you are doing.
 if __name__ == "__main__":
-    main = generate()
-    main.simulate()
+    configuration = configuration_v2.Configuration("F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/config.ini")
+    main = generate(configuration)
+    # main.simulate()
     # generate.boundaryCell()
     if config.unitTest == True:
         generate.unitTest()

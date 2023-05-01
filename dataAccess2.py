@@ -79,23 +79,22 @@ class get():
         data = lfr.from_gdal(output_mem_file, config.partitionShape)
         return data
     
-    def soil_csv(dataFile, soilType):
+    def soil_csv(dataFile, soilType, configuration):
         # Assign K for de Wupsel
-        Ks = gen.lue_one() * 0.05
-        porosity = gen.lue_one() * 0.35
-        wiltingPoint = gen.lue_one() * 0.15
+        Ks = gen.lue_one(configuration) * 0.05
+        porosity = gen.lue_one(configuration) * 0.35
+        wiltingPoint = gen.lue_one(configuration) * 0.15
         scTable = pd.read_csv(dataFile)
         ID = scTable["ID"]
         KsValue = scTable["Ks"]
         for count, ID in enumerate(ID):
             Ks = lfr.where(soilType == ID, KsValue[count], Ks)
-            
         return (Ks / 86400), porosity, wiltingPoint
     
-    def landCharacteristics_csv(dataFile, landUse):
+    def landCharacteristics_csv(dataFile, landUse, configuration):
         # Use the ID values given to the QGIS raster to determine which land-use types are assigned which values.
         # Standard values
-        dummy                  = gen.lue_one()
+        dummy                  = gen.lue_one(configuration)
         permeability           = dummy * 0.8
         mannings               = dummy * 0.045
         interceptionStorageMax = dummy * 0.001
@@ -122,7 +121,7 @@ class get():
                 
         return mannings, permeability, interceptionStorageMax, throughfallFraction
     
-    def csvData(date, cellArea, dataFile):
+    def csvData(date, cellArea, dataFile, configuration):
         """
         Args:
             date (_type_): Gives the concurrent date of the model.
@@ -144,19 +143,20 @@ class get():
         except:
             dataValue = 0
         
-        return gen.lue_one() * (dataValue / (1000 * 3600)) * cellArea  # Convert to m3/s rate
+        return gen.lue_one(configuration) * (dataValue / (1000 * 3600)) * cellArea  # Convert to m3/s rate
     
-    def interception(cellArea, interceptionStorage, interceptionStorageMax, precipitation, ref_evaporation, throughfallFraction):
-        interception = (gen.lue_one() - throughfallFraction) * precipitation * int(config.includeInterception)
+    def interception(cellArea, interceptionStorage, interceptionStorageMax, precipitation, ref_evaporation, throughfallFraction, configuration):
+        interception = (gen.lue_one(configuration) - throughfallFraction) * precipitation * int(configuration.generalSettings['includePrecipitation'])
         
-        enoughWaterInt = (interception + interceptionStorage/config.dt) > ref_evaporation  
+        enoughWaterInt = (interception + interceptionStorage/int(configuration.modelSettings['iterationsBeforeReport'])) > ref_evaporation  
 
-        interceptionStorage = lfr.where(enoughWaterInt, interceptionStorage + (interception - ref_evaporation) * config.dt, 0)
+        interceptionStorage = lfr.where(enoughWaterInt, interceptionStorage + (interception - ref_evaporation) * int(configuration.modelSettings['iterationsBeforeReport']), 0)
         
         interceptionStorageSurplus = lfr.where(interceptionStorage > interceptionStorageMax, interceptionStorage - interceptionStorageMax, 0)
-        precipitation = precipitation - interception + (interceptionStorageSurplus/config.dt)
+        interceptionStorage        = interceptionStorage - interceptionStorageSurplus
+        precipitation = precipitation - (interception - interceptionStorageSurplus/int(configuration.modelSettings['iterationsBeforeReport']))
         
-        evapotranspirationSurface = lfr.where(enoughWaterInt, 0, ref_evaporation - (interception + interceptionStorage/config.dt))
+        evapotranspirationSurface = lfr.where(enoughWaterInt, 0, ref_evaporation - (interception + interceptionStorage/int(configuration.modelSettings['iterationsBeforeReport'])))
         return interceptionStorage, precipitation, evapotranspirationSurface
     
     def infiltration(Sgw, MaxSgw, cellArea, Ks, permeability, porosity, precipitation, evapotranspirationSurface):

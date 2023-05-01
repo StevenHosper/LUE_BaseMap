@@ -48,5 +48,3 @@ class Configuration(object):
 if __name__ == '__main__':
     configuration = Configuration("F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/config.ini")
     
-    print(configuration.generalSettings)
-    
