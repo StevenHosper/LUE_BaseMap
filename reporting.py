@@ -31,9 +31,9 @@ class report():
         
         if configuration.generalSettings['includePrecipitation'] == "True":
             p = pd.read_csv(configuration.generalSettings["inputDir"] + configuration.dataSettings["precipitationData"], names=["date", "p"])
-            startIDX= p.index[p["date"] == startDateTxt].tolist()
-            endIDX  = p.index[p["date"] == endDateTxt].tolist()
-            meanPrecipitation = p.p[startIDX:endIDX-1].mean()
+            startIDX= p.index[p["date"] == startDateTxt].tolist()[0]
+            endIDX  = p.index[p["date"] == endDateTxt].tolist()[0]
+            meanPrecipitation = p.p[startIDX:(endIDX-1)].mean()
         else:
             meanPrecipitation = 0
         
@@ -41,7 +41,7 @@ class report():
             e = pd.read_csv(configuration.generalSettings["inputDir"] + configuration.dataSettings["evapotranspirationData"], names=["date", "e"])
             startIDX= e.index[e["date"] == startDateTxt].tolist()[0]
             endIDX  = e.index[e["date"] == endDateTxt].tolist()[0]
-            meanEvapotranspiration = e.e[startIDX:endIDX-1].mean()
+            meanEvapotranspiration = e.e[startIDX:(endIDX-1)].mean()
         else:
             meanEvapotranspiration = 0
         
