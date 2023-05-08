@@ -11,7 +11,7 @@ import datetime
 import uuid as uid
 from osgeo import gdal
 import configuration as config
-from dataGen import generate as gen
+from StandardArraysLUE import StandardArraysLUE as gen
 import requests
 from pcraster import aguila
 import math
@@ -145,8 +145,8 @@ class get():
         
         return gen.lue_one(configuration) * (dataValue / (1000 * 3600)) * cellArea  # Convert to m3/s rate
     
-    def interception(cellArea, interceptionStorage, interceptionStorageMax, precipitation, ref_evaporation, throughfallFraction, configuration):
-        interception = (gen.lue_one(configuration) - throughfallFraction) * precipitation * int(configuration.generalSettings['includePrecipitation'])
+    def interception(cellArea, interceptionStorage, interceptionStorageMax, precipitation, ref_evaporation, throughfallFraction, configuration):      
+        interception = (gen.lue_one(configuration) - throughfallFraction) * precipitation
         
         enoughWaterInt = (interception + interceptionStorage/int(configuration.modelSettings['iterationsBeforeReport'])) > ref_evaporation  
 
@@ -160,7 +160,7 @@ class get():
         return interceptionStorage, precipitation, evapotranspirationSurface
     
     def infiltration(Sgw, MaxSgw, cellArea, Ks, permeability, porosity, precipitation, evapotranspirationSurface):
-        potInfiltration = Ks * permeability * int(config.includeInfiltration) # meters that can infiltrate the soil
+        potInfiltration = Ks * permeability                                                                 # meters that can infiltrate the soil
         potInfiltration = lfr.where(((MaxSgw - Sgw)/cellArea)*porosity < potInfiltration, \
                                         ((MaxSgw - Sgw)/cellArea)*porosity, potInfiltration) * cellArea     # The amount that can infiltrate because of capacity times the area
         enoughWaterInf   = precipitation - evapotranspirationSurface > potInfiltration                      # If there is more water on the surface available than can infiltrate
@@ -180,3 +180,27 @@ class get():
         date = datetime.datetime(dt.year, dt.month, dt.day,
                                  dt.hour, dt.minute - deltaMin)
         return date
+    
+    def pet_Hamon(configuration, temperature, date):
+        """
+        Simulates the potential evaporation based on parameters supplied.
+        As of yet only takes the temperature into account, makes sure that any temperature \
+        below zero has no evporation, the rest is exponentially scaled with temperature. 
+        """
+        latitude = 0.90                                                     # in radians
+        day = int((date - datetime.date(year=date.year, month=1, day=1)).days) + 1                     # calculate the day of the year
+        declination = 1 + 0.033*math.cos((2*math.pi*day)/365)               # calculate the declination
+        sunset_angle = math.acos(math.radians(-math.tan(math.radians(declination))*math.tan(math.radians(latitude))))
+        N = (24/math.pi)*sunset_angle                                       # calculate the amount of daylight hours per 12 hours
+        K = 273.3                                                           # Kelvin to degrees conversion
+        k = 1                                                               # Proportionality constant
+        
+        saturated_vapor_pressure = 6.108*math.e**((17.27*temperature)/(temperature + K))        # calculate saturated vapor pressure
+        evaporation = k * 0.165 * 216.7 * N * (saturated_vapor_pressure / (temperature + K))    # calculate the evaporation rate in mm / day
+        evaporation = evaporation / 1000                                                        # convert to m / day
+        evaporation = lfr.create_array(2*(configuration.modelSettings['arrayExtent'],),
+                                2*(configuration.modelSettings['partitionExtent'],),
+                                dtype = np.dtype(np.float64),
+                                fill_value = np.float64(evaporation),
+                                )
+        return evaporation
