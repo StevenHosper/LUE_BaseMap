@@ -106,7 +106,7 @@ class RetrieveData():
                 
         return mannings, permeability, interception_storage_max, throughfall_fraction
     
-    def roundDownDateTime(dt):
+    def roundDownDateTime(self, dt):
         """Rounds down the time to the previous 5 minutes
         
         Args:
