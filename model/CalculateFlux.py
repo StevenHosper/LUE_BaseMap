@@ -6,12 +6,9 @@ Created on 8 May 2023
 """
 
 import lue.framework as lfr
-import numpy as np
-import datetime
-import pandas as pd
 from StandardArraysLUE import StandardArraysLUE
 
-class CalculateFlux():
+class CalculateFlux:
     def __init__(self, configuration):
         """
         Initialize the class. 
@@ -21,15 +18,15 @@ class CalculateFlux():
         self.std_arr_lue        = StandardArraysLUE(configuration)
         
         self.iterations = int(configuration.modelSettings['iterationsBeforeReport'])
-        self.includePrecipitation        = configuration.generalSettings['includePrecipitation']
-        self.includeEvapotranspiration   = configuration.generalSettings['includeEvapotranspiration']
-        self.includeInfiltration         = configuration.generalSettings['includeInfiltration']
-        self.includeInterception         = configuration.generalSettings['includeInterception']
-        self.includePercolation          = configuration.generalSettings['includePercolation']
-        self.cA                    = int(configuration.modelSettings['resolution'])**2
+        self.include_precipitation        = configuration.generalSettings['includePrecipitation']
+        self.include_evapotranspiration   = configuration.generalSettings['includeEvapotranspiration']
+        self.include_infiltration         = configuration.generalSettings['includeInfiltration']
+        self.include_interception         = configuration.generalSettings['includeInterception']
+        self.include_percolation          = configuration.generalSettings['includePercolation']
+        self.ca                           = int(configuration.modelSettings['resolution'])**2
         
     
-    def interception(self, intStor, intStorMax, pre, rev, thF):
+    def interception(self, int_stor, int_stor_max, pre, rev, th_f):
         """Calculate the interceptionStorage, evapotranspiration of the surface and precipitation that falls through the canopy.
         
         Uses information known about the storage capacity and throughfall fraction of the vegetation to determine how much 
@@ -38,60 +35,60 @@ class CalculateFlux():
         at the surface, because the evaporative potential is already met by the vegetation.
         
         Args:
-            intStor (lpa*):     Current water stored from interception in the vegetation
-            intStorMax (lpa*):  Maximum amount of interception stored
+            int_stor (lpa*):     Current water stored from interception in the vegetation
+            int_stor_max (lpa*):  Maximum amount of interception stored
             pre (lpa*):         Precipitation rate
             rev (lpa*):         Reference evapotranspiration rate
             thF (lpa*):         Throughfall fraction
         
         Returns:
-            intStor (lpa*):                     Updated water stored from interception in the vegetation
+            int_stor (lpa*):                     Updated water stored from interception in the vegetation
             precipitation (lpa*):               Precipitation rate that falls through the vegetation towards the soil
-            evapotranspirationSurface (lpa*):   Evaporative potential left after interception evaporation
+            evapotranspiration_surface (lpa*):   Evaporative potential left after interception evaporation
             
         lpa*: lue partitioned array
         """      
         # Determine the interception rate
-        interception    = (self.std_arr_lue.one() - thF) * pre
+        interception    = (self.std_arr_lue.one() - th_f) * pre
         
         # Determine if there is enough water in the canopy to meet all evaporative potential
-        enoughWaterInt  = (interception + intStor/self.iterations) > rev  
+        enough_water  = (interception + int_stor/self.iterations) > rev  
 
         # If there is enough water, update the interception storage, otherwise set at zero
-        intStor         = lfr.where(enoughWaterInt, intStor + (interception - rev) * self.iterations, 0)
+        int_stor         = lfr.where(enough_water, int_stor + (interception - rev) * self.iterations, 0)
         
         # If the store is exceeded, add to variable called interception storage surplus
-        intStorSurplus  = lfr.where(intStor > intStorMax, intStor - intStorMax, 0)
+        int_storSurplus  = lfr.where(int_stor > int_stor_max, int_stor - int_stor_max, 0)
         
         # Remove the surplus from the interception storage
-        intStor         = intStor - intStorSurplus
+        int_stor         = int_stor - int_storSurplus
         
         # Add the interception storage surplus back to the precipitation
-        precipitation   = pre - (interception - intStorSurplus/self.iterations)
+        precipitation   = pre - (interception - int_storSurplus/self.iterations)
         
-        evapotranspirationSurface = lfr.where(enoughWaterInt, 0, rev - (interception + intStor/self.iterations))
-        return intStor, precipitation, evapotranspirationSurface
+        evapotranspirationSurface = lfr.where(enough_water, 0, rev - (interception + int_stor/self.iterations))
+        return int_stor, precipitation, evapotranspirationSurface
 
-    def evapotranspiration(self, pre, evS):
+    def evapotranspiration(self, pre, ev_s):
         """Determine the actual surface and soil evapotranspiration
         
         Args:
             pre (lpa*): Precipitation rate
-            evS (lpa*): Evaporative potential left for the surface
+            ev_s (lpa*): Evaporative potential left for the surface
         
         Returns:
-            evapotranspirationSurface (lpa*):   Actual surface evapotranspiration rate
-            evapotranspirationSoil (lpa*):      Actual soil evaporation rate
+            evapotranspiration_surface (lpa*):   Actual surface evapotranspiration rate
+            evapotranspiration_soil (lpa*):      Actual soil evaporation rate
         
         lpa*: lue partitioned array
         """
-        enoughWaterE = pre > evS
-        evapotranspirationSoil = lfr.where(enoughWaterE, 0, evS - pre)
-        evapotranspirationSurface = lfr.where(enoughWaterE, evS, pre)
+        enough_water = pre > ev_s
+        evapotranspiration_soil = lfr.where(enough_water, 0, ev_s - pre)
+        evapotranspiration_surface = lfr.where(enough_water, ev_s, pre)
         
-        return evapotranspirationSurface, evapotranspirationSoil
+        return evapotranspiration_surface, evapotranspiration_soil
     
-    def infiltration(self, Sgw, MaxSgw, Ks, prm, por, pre, evS):
+    def infiltration(self, sgw, max_sgw, Ks, prm, por, pre, ev_s):
         """Determine the direct and potential channel infiltration
         
         First determines the potential infiltration rate. Then determines if plenty of water
@@ -100,27 +97,27 @@ class CalculateFlux():
         is turned into potential channel infiltration. 
         
         Args:
-            Sgw (lpa*):     Groundwater storage
-            MaxSgw (lpa*):  Maximum groundwater storage
+            sgw (lpa*):     Groundwater storage
+            max_sgw (lpa*):  Maximum groundwater storage
             Ks (lpa*):      Hydraulic conductivity
             prm (lpa*):     Permeability
             por (lpa*):     Porosity
             pre (lpa*):     Precipitation rate reaching the soil
-            evS (lpa*):     Actual surface evapotranspiration
+            ev_s (lpa*):     Actual surface evapotranspiration
         
         Returns:
             direct_infiltration (lpa*):     precipitation that directly infiltrates the soil
-            potInfiltrationChannel (lpa*):  if the potential infiltration is not yet reached,
+            pot_infil_channel (lpa*):  if the potential infiltration is not yet reached,
                                             water flowing into the cells could still infiltrate.
         
         lpa*: lue partitioned array
         """
-        potInfiltration = Ks * prm                                                              # meters that can infiltrate the soil
-        potInfiltration = lfr.where(((MaxSgw - Sgw)/self.cA)*por < potInfiltration, \
-                                    ((MaxSgw - Sgw)/self.cA)*por, potInfiltration) * self.cA    # The amount that can infiltrate because of capacity times the area
-        enoughWaterInf   = pre - evS > potInfiltration                                          # If there is more water on the surface available than can infiltrate
-        direct_infiltration = lfr.where(enoughWaterInf, potInfiltration, pre - evS)             # Either the potInfiltration will fully infiltrate
-        potInfiltrationChannel = lfr.where(enoughWaterInf, 0, 
-                                           potInfiltration - direct_infiltration) / self.cA
-        return direct_infiltration, potInfiltrationChannel                                      # or the available water at the surface will.
+        pot_infiltration = Ks * prm                                                              # meters that can infiltrate the soil
+        pot_infiltration = lfr.where(((max_sgw - sgw)/self.ca)*por < pot_infiltration, \
+                                    ((max_sgw - sgw)/self.ca)*por, pot_infiltration) * self.ca    # The amount that can infiltrate because of capacity times the area
+        enough_water   = pre - ev_s > pot_infiltration                                          # If there is more water on the surface available than can infiltrate
+        direct_infiltration = lfr.where(enough_water, pot_infiltration, pre - ev_s)             # Either the pot_infiltration will fully infiltrate
+        pot_infil_channel = lfr.where(enough_water, 0, 
+                                           pot_infiltration - direct_infiltration) / self.ca
+        return direct_infiltration, pot_infil_channel                                      # or the available water at the surface will.
         
