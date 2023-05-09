@@ -13,14 +13,15 @@ import sys
 import time
 import csv
 
-# Own functions
-# TO-DO: Reformat by the use of: from ... import ... as ...
+# Submodules
 from configuration_v2 import Configuration
-import MakeGIF
 from reporting import report
 from StandardArraysLUE import StandardArraysLUE
 from RetrieveData import RetrieveData
 from CalculateFlux import CalculateFlux
+
+# Other tools
+from tools import MakeGIF
 
 # Timer to add some measure of functionality to the program
 start_time = time.time()

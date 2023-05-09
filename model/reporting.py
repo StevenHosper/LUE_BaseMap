@@ -5,7 +5,6 @@ Created on Mon Mar 7 2023
 @author: steven.hosper
 """
 import lue.framework as lfr
-import configuration as config
 import datetime
 import numpy as np
 from osgeo import gdal

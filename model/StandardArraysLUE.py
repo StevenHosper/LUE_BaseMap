@@ -7,11 +7,7 @@ Created on Wed Feb 15 10:03:54 2023
 
 import lue.framework as lfr
 import numpy as np
-import requests
-import datetime
 import math as math
-import configuration as config
-import configuration_v2
 
 class StandardArraysLUE(): 
     def __init__(self, configuration):
