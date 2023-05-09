@@ -10,28 +10,28 @@ import configparser
 
 class Configuration(object):
     
-    def __init__(self, iniFile):
+    def __init__(self, ini_file):
         
         object.__init__(self)
         
         # Check if ini-file is given
-        if iniFile is None:
+        if ini_file is None:
             raise Exception('Error: No configuration file found')
         
-        self.workDir    = os.getcwd()
+        self.work_dir    = os.getcwd()
         
-        self.iniFilePath = os.path.join(self.workDir, iniFile)
+        self.ini_file_path = os.path.join(self.work_dir, ini_file)
         
-        self.parseConfigFile(self.iniFilePath)
+        self.parseConfigFile(self.ini_file_path)
         
         
         
-    def parseConfigFile(self, fileName):
+    def parseConfigFile(self, file_name):
         
         # Activate parser and read ini-file
         config = configparser.ConfigParser()
         config.optionxform = str
-        config.read(fileName)
+        config.read(file_name)
         
         # Read the different available setting groups
         self.groups = config.sections()
