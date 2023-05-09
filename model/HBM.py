@@ -21,7 +21,7 @@ from RetrieveData import RetrieveData
 from CalculateFlux import CalculateFlux
 
 # Other tools
-from tools import MakeGIF
+import tools.MakeGIF
 
 # Timer to add some measure of functionality to the program
 start_time = time.time()
@@ -277,6 +277,6 @@ if lfr.on_root_locality():
     # Process the results into a gif
     if configuration.generalSettings['makeGIF'] == 'True':
         print(f"Creating a GIF for: {configuration.gifSettings['variables']}.")
-        MakeGIF.run(configuration)
+        tools.MakeGIF.run(configuration)
 
 print("--- %s seconds ---" % (time.time() - start_time))
