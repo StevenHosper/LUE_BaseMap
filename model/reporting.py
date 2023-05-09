@@ -28,8 +28,8 @@ class Report:
     def balance_report(self, configuration):
         dir = configuration.generalSettings["outputDir"] + configuration.generalSettings["scenario"]
         
-        start_date = self.string2datetime(configuration.modelSettings['startDate'], seperator= ", ")
-        end_date   = self.string2datetime(configuration.modelSettings['endDate'], seperator= ", ")
+        start_date = self.string_to_datetime(configuration.modelSettings['startDate'], seperator= ", ")
+        end_date   = self.string_to_datetime(configuration.modelSettings['endDate'], seperator= ", ")
         start_date_txt = start_date.strftime("%d/%m/%Y %H:%M")
         end_date_txt   = end_date.strftime("%d/%m/%Y %H:%M")
         
@@ -51,18 +51,18 @@ class Report:
         
         end_date = end_date - datetime.timedelta(minutes=1)
         
-        ini_sur_stor = self.tiff2npsum(dir + "/{}_height_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M")))
+        ini_sur_stor = self.tiff_to_np_sum(dir + "/{}_height_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M")))
         iniGroStor = dir + "/{}_Sgw_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M"))
-        ini_int_stor = self.tiff2npsum(dir + "/{}_interceptionStorage_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M")))
-        end_sur_stor = self.tiff2npsum(dir + "/{}_height_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M")))
+        ini_int_stor = self.tiff_to_np_sum(dir + "/{}_interceptionStorage_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M")))
+        end_sur_stor = self.tiff_to_np_sum(dir + "/{}_height_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M")))
         endGroStor = dir + "/{}_Sgw_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M"))
-        end_int_stor = self.tiff2npsum(dir + "/{}_interceptionStorage_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M")))
+        end_int_stor = self.tiff_to_np_sum(dir + "/{}_interceptionStorage_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M")))
         
         resolution = (int(configuration.modelSettings["resolution"]))
         cell_area   = resolution ** 2
         
         del_sur_stor = (end_sur_stor - ini_sur_stor) * resolution
-        del_gro_stor = self.tiff2npsumdifference(endGroStor, iniGroStor) * float(configuration.modelSettings["porosity"])
+        del_gro_stor = self.tiff_to_np_sum_difference(endGroStor, iniGroStor) * float(configuration.modelSettings["porosity"])
         del_int_stor = (end_int_stor - ini_int_stor)
         net_balance = del_sur_stor + del_int_stor + del_gro_stor
         precipitation       = (((end_IDX - start_IDX) / 12) * mean_Precipitation) / 1000 * cell_area * (int(configuration.modelSettings["arrayExtent"]) ** 2) * (float(configuration.modelSettings["validCellsPercentage"]))/100
@@ -91,14 +91,14 @@ class Report:
         
         return 0
     
-    def tiff2npsum(self, file):
+    def tiff_to_np_sum(self, file):
         data = gdal.Open(file)
         img = data.GetRasterBand(1)
         raster = img.ReadAsArray()
         npArraySum = np.nansum(raster)
         return npArraySum
     
-    def string2datetime(self, date_string: str, seperator: str):
+    def string_to_datetime(self, date_string: str, seperator: str):
         date_int_list = list(map(int, date_string.split(seperator)))
         datetime_date = datetime.datetime(date_int_list[0],
                                           date_int_list[1],
@@ -109,7 +109,7 @@ class Report:
         return datetime_date
         
     
-    def tiff2npsumdifference(self, file1, file2):
+    def tiff_to_np_sum_difference(self, file1, file2):
         data1 = gdal.Open(file1)
         img1 = data1.GetRasterBand(1)
         raster1 = img1.ReadAsArray()

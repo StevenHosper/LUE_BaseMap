@@ -25,46 +25,46 @@ class RetrieveData():
         self.output_dir         = configuration.generalSettings['outputDir']
         self.input_dir          = configuration.generalSettings['inputDir']
         
-    def soil_csv(self, dataFile, soilType):
+    def soil_csv(self, data_file, soil_type):
         """Reads the soil properties dependent on the soil IDs of the lue array
         
         Args:
-            dataFile (path):
-            soilType (lpa*):
+            data_file (path):
+            soil_type (lpa*):
             
         Returns:
             Ks (lpa*):
             porosity (lpa*):
-            wiltingPoint (lpa*)
+            wilting_point (lpa*)
             
         lpa*: lue partitioned array
         """
         # Assign standard values for de Wupsel
         Ks = self.std_arr_lue.one() * 0.05
         porosity = self.std_arr_lue.one() * 0.35
-        wiltingPoint = self.std_arr_lue.one() * 0.15
+        wilting_point = self.std_arr_lue.one() * 0.15
         
         # Read pandas data table
-        scTable = pd.read_csv(dataFile)
+        data_table = pd.read_csv(data_file)
         
         # Split into ID and Ks value
-        ID = scTable["ID"]
-        KsValue = scTable["Ks"]
+        ID = data_table["ID"]
+        Ks_value = data_table["Ks"]
         
         # When the ID of the table meets an ID within the partitioned array, assign value
         for count, ID in enumerate(ID):
-            Ks = lfr.where(soilType == ID, KsValue[count], Ks) / 86400      # To m/s 
-        return Ks, porosity, wiltingPoint
+            Ks = lfr.where(soil_type == ID, Ks_value[count], Ks) / 86400      # To m/s 
+        return Ks, porosity, wilting_point
     
-    def land_characteristics_csv(self, dataFile, landUse):
+    def land_characteristics_csv(self, data_file, land_use):
         """Reads the land characteristics from a csv file
         
         Gives standard values to the entire array using the set array extent.
         Continues to read values from data file to the corresponding map IDs.
         
         Args:
-            dataFile (path):    the path to the csv data file containing the land characteristics information
-            landUse (lpa*):     array containing the id that matches every cell to its \
+            data_file (path):    the path to the csv data file containing the land characteristics information
+            land_use (lpa*):     array containing the id that matches every cell to its \
                                 corresponding characteristic values.
                 
         Returns:
@@ -83,30 +83,30 @@ class RetrieveData():
         interception_storage_max = dummy * 0.001
         throughfall_fraction    = dummy * 0.90
         LAI                     = dummy * 0.5
-        cropFactor              = dummy * 1.0
+        crop_factor              = dummy * 1.0
         
         # Open data table and load columns into variables
-        data = pd.read_csv(dataFile)
+        data = pd.read_csv(data_file)
         ID = data["Code"]
         mannings_friction               = data["Friction"]
         permeability_value              = data["Permeability"]
         interception_storage_max_value  = data["Interception"]
-        LAIValue                        = data["LAI"]
-        throughfall_fractionValue       = data["f"]
-        cropFactorValue                 = data["Crop_type"]
+        LAI_value                        = data["LAI"]
+        throughfall_fraction_value       = data["f"]
+        crop_factor_value                 = data["Crop_type"]
         
         # When an ID matches the array ID, assign value
         for count, ID in enumerate(ID):
-            mannings                    = lfr.where(landUse == ID, mannings_friction[count], mannings)
-            permeability                = lfr.where(landUse == ID, permeability_value[count], permeability)
-            interception_storage_max    = lfr.where(landUse == ID, interception_storage_max_value[count], interception_storage_max)
-            # LAI                       = lfr.where(soilType == ID, LAIValue[count], LAI)
-            throughfall_fraction        = lfr.where(landUse == ID, throughfall_fractionValue[count], throughfall_fraction)
-            # cropFactor                = lfr.where(soilType == ID, cropFactorValue[count], cropFactor)
+            mannings                    = lfr.where(land_use == ID, mannings_friction[count], mannings)
+            permeability                = lfr.where(land_use == ID, permeability_value[count], permeability)
+            interception_storage_max    = lfr.where(land_use == ID, interception_storage_max_value[count], interception_storage_max)
+            # LAI                       = lfr.where(land_use == ID, LAI_value[count], LAI)
+            throughfall_fraction        = lfr.where(land_use == ID, throughfall_fraction_value[count], throughfall_fraction)
+            # crop_factor                = lfr.where(land_use == ID, crop_factor_value[count], crop_factor)
                 
         return mannings, permeability, interception_storage_max, throughfall_fraction
     
-    def roundDownDateTime(self, dt):
+    def rounddown_datetime(self, dt):
         """Rounds down the time to the previous 5 minutes
         
         Args:
@@ -116,15 +116,15 @@ class RetrieveData():
             date (datetime date):   datetime date rounded down
         
         """
-        deltaMin = dt.minute % 5
+        delta_min = dt.minute % 5
         date = datetime.datetime(dt.year, dt.month, dt.day,
-                                 dt.hour, dt.minute - deltaMin)
+                                 dt.hour, dt.minute - delta_min)
         return date
     
-    def csvTimeseries2Flux(self, dataFile, refactor, date):
+    def csv_timeseries_to_flux(self, data_file, refactor, date):
         """
         Args:
-            dataFile (path):        The file out of which data is to be extracted
+            data_file (path):        The file out of which data is to be extracted
             refactor (float):       To refactor the value within the timeseries to a flux in m3/s to the model.
                                     Example: from mm/h to m3/s for cell area of 25 -> \
                                         ([cell area: 25]  /  [mm to m: 1000])  /  [h to s: 3600] 
@@ -133,19 +133,19 @@ class RetrieveData():
             
 
         Returns:
-            dataValue (lue partitioned array): A lue array with the data in a flux of m/s
+            data_value (lue partitioned array): A lue array with the data in a flux of m/s
         """
-        roundedDate = self.roundDownDateTime(date)
+        rounded_date = self.rounddown_datetime(date)
         # Convert date to a string
-        dateTime = roundedDate.strftime("%d/%m/%Y %H:%M")
+        date_time = rounded_date.strftime("%d/%m/%Y %H:%M")
         
         # Read the csv and set the index
         try:
-            data = pd.read_csv(dataFile, sep=",", names=['datetime', 'dataValue'])
-            data.set_index('datetime', inplace=True)
-            dataValue = data.loc[f'{dateTime}']['dataValue']
-            dataValue = dataValue * refactor * self.std_arr_lue.one() # Convert to m/s rate from mm/h
+            data = pd.read_csv(data_file, sep=",", names=['date_time', 'data_value'])
+            data.set_index('date_time', inplace=True)
+            data_value = data.loc[f'{date_time}']['data_value']
+            data_value = data_value * refactor * self.std_arr_lue.one() # Convert to m/s rate from mm/h
         except:
-            dataValue = self.std_arr_lue.zero()
+            data_value = self.std_arr_lue.zero()
         
-        return dataValue  
+        return data_value  
