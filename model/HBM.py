@@ -71,7 +71,7 @@ class mainModel:
         
         self.gw_base = float(configuration.modelSettings['groundWaterBase']) * self.standard_LUE.one()
         # self.ldd = lfr.d8_flow_direction(self.dem)
-        self.ldd        = lfr.from_gdal(self.inputDir + configuration.dataSettings['ldd'], partition_shape)
+        self.ldd        = lfr.from_gdal(self.input_dir + configuration.dataSettings['ldd'], partition_shape)
         # Set constants
         self.resolution                 = float(configuration.modelSettings['resolution'])
         self.cell_area                   = self.resolution * self.resolution

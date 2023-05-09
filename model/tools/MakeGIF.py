@@ -9,7 +9,6 @@ import osgeo.gdal as gdal
 import os.path
 import sys
 import datetime
-from model import configuration_v2
 
 class makeGIF:
     def __init__(self):
@@ -95,8 +94,3 @@ def run(configuration):
         vmax = vmax_dict[var]
         
         makeGIF.create_animation(raster_pathname, nr_rasters, animation_pathname, vmin, vmax, start_date, fps)
-
-
-if __name__ == "__main__":
-    configuration = configuration_v2.Configuration("F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/config.ini")
-    run(configuration)
