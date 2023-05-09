@@ -9,9 +9,12 @@ Currently many of the NHI uses a lumped model for many of the watersheds in the 
 In order to improve this and make it easier to adapt when a situation changes it seems preferable to create a fully distributed model. 
 With recent technological improvements, like the LUE modelling framework, the possibility of a fully distributed model for the Netherlands has increased.
 The long-term goal is to accurately represent the Netherlands at high-resolution with simulations based on atmospheric inputs.
+
 The initial study will investigate the capabilities of LUE framework to build a hydrologic model that can accurately represent the Hupselse Beek region in the East of the Netherlands. 
 This region is only 25 km2, and ideally the entire Netherlands would be modelled eventually, but hardware is limited. 
+
 During development 16 GB of RAM and an 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz processor are used.
+
 Developing a smaller array will improve the speed of model development and allow for quick adaptations.
 
 ## Model concept
