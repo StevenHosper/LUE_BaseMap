@@ -7,24 +7,34 @@ In this project Nelen & Schuurmans and the University Utrecht work together in o
 ## Research goals
 Currently many of the NHI uses a lumped model for many of the watersheds in the Netherlands. 
 In order to improve this and make it easier to adapt when a situation changes it seems preferable to create a fully distributed model. 
-With recent technological improvements, like LUE, the possibility of a fully distributed model for the Netherlands increased.
-The goal is to accurately represent large parts of the Netherlands at high-resolution with simulations based on atmospheric inputs.
-Large, in ideal situations, would mean the entire Netherlands, however, the hardware during this project is limited.
-Therefore initially we will work with a array of 1000x1000 and 5000x5000 size.
-This will improve the speed of model development and allow for quick adaptations.
+With recent technological improvements, like the LUE modelling framework, the possibility of a fully distributed model for the Netherlands has increased.
+The long-term goal is to accurately represent the Netherlands at high-resolution with simulations based on atmospheric inputs.
+
+The initial study will investigate the capabilities of LUE framework to build a hydrologic model that can accurately represent the Hupselse Beek region in the East of the Netherlands. 
+This region is only 25 km2, and ideally the entire Netherlands would be modelled eventually, but hardware is limited. 
+
+During development 16 GB of RAM and an 11th Gen Intel(R) Core(TM) i5-1135G7 @ 2.40GHz processor are used.
+
+Developing a smaller array will improve the speed of model development and allow for quick adaptations.
 
 ## Model concept
-Currently the model is mainly planned to function for surface water routing.
-This will supply data required by the ModFlow-MetaSwap groundwater model that is currently being used for modelling purposes in general.
-Ideally during this project the coupling will have already occured to make the results of the model more accurate.
-However, as of yet it is not clear how fast development will go, and if LUE is even capable of the attaining accurate results for high-resolution large-scale modelling.
-For now the model is planned to incorporate atleast the following surface processes:
+The main goal was to create a surface water routing model. 
+During initial creating of the model it became aparent that groundwater would have to be included.
+Model configuration is currently determined within an ini file, of which a template can be found within the config folder.
+Data for atmospheric fluxes is extracted from csv files in mm/hour and converted to a m/s rate.
+
+Initial conditions are set if files are suplied for the initial conditions of one of the following: initial groundwater storage, initial interception storage, initial surface water height. The default value is zero.
+
+Currently the model includes the following fluxes:
+*Vertical*
 - Precipitation
 - Evaporation
 - Infiltration
-- Abstraction
-- Injection
+- Interception
 
-If groundwater processes are added, percolation and seepage will be the first to be added.
-A good connection to the groundwater is preferred as many areas in the Netherlands are heavily influenced by groundwaterflows. 
-However, initially to deminish model complexities, groundwater flow will be ignored.
+*Lateral*
+- Discharge
+- Groundwater flow
+- Seepage
+
+Currently new flux values are set every 60 seconds, at this same time interval outputs are reported.
