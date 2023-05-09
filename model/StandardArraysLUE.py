@@ -9,7 +9,7 @@ import lue.framework as lfr
 import numpy as np
 import math as math
 
-class StandardArraysLUE(): 
+class StandardArraysLUE: 
     def __init__(self, configuration):
         """
         Initialize the class. 
