@@ -125,11 +125,11 @@ class mainModel:
         gw_height   = self.imperm_lay_height + gw_s/self.cell_area
         
         # Values for discharge to height calculation
-        slope_sqrd           = lfr.sqrt(self.slope)
-        slope_sqrd           = lfr.where(slope_sqrd < 0.001, 0.001, slope_sqrd)
-        slope_sqrd           = lfr.where(slope_sqrd > 0.05, 0.05, slope_sqrd)
-        width               = 1
-        coefficient         = self.mannings / (slope_sqrd * width)
+        slope_sqrd  = lfr.sqrt(self.slope)
+        slope_sqrd  = lfr.where(slope_sqrd < 0.001, 0.001, slope_sqrd)
+        slope_sqrd  = lfr.where(slope_sqrd > 0.05, 0.05, slope_sqrd)
+        width       = 1
+        coefficient = self.mannings / (slope_sqrd * width)
         
         # Channel length and area
         channel_length       = self.resolution * self.standard_LUE.one()
@@ -160,29 +160,29 @@ class mainModel:
                 
                 # Load flux and storage values
                 precipitation = self.retrieve_data.csv_timeseries_to_flux(configuration.generalSettings['inputDir'] +
-                                                                      configuration.dataSettings['precipitationData'],
-                                                                      refactor, date) # m/s
+                                                                          configuration.dataSettings['precipitationData'],
+                                                                          refactor, date) # m/s
                 
                 ref_evaporation = self.retrieve_data.csv_timeseries_to_flux(configuration.generalSettings['inputDir'] +
-                                                                        configuration.dataSettings['evapotranspirationData'],
-                                                                        refactor, date) # m/s
+                                                                            configuration.dataSettings['evapotranspirationData'],
+                                                                            refactor, date) # m/s
                 
                 int_s, precipitation, evapotranspiration_surface = self.calculate_flux.interception(int_s,
-                                                                                                                 self.max_int_s,
-                                                                                                                 precipitation,
-                                                                                                                 ref_evaporation,
-                                                                                                                 self.throughfall_frac)
+                                                                                                    self.max_int_s,
+                                                                                                    precipitation,
+                                                                                                    ref_evaporation,
+                                                                                                    self.throughfall_frac)
                 
                 evapotranspiration_surface, evapotranspiration_soil = self.calculate_flux.evapotranspiration(precipitation,
-                                                                                                           evapotranspiration_surface)
+                                                                                                             evapotranspiration_surface)
                 
-                direct_infiltration, pot_channel_infiltation       = self.calculate_flux.infiltration(gw_s,
-                                                                                                     self.max_gw_s,
-                                                                                                     self.Ks,
-                                                                                                     self.permeability,
-                                                                                                     self.porosity,
-                                                                                                     precipitation,
-                                                                                                     evapotranspiration_surface)
+                direct_infiltration, pot_channel_infiltation = self.calculate_flux.infiltration(gw_s,
+                                                                                                self.max_gw_s,
+                                                                                                self.Ks,
+                                                                                                self.permeability,
+                                                                                                self.porosity,
+                                                                                                precipitation,
+                                                                                                evapotranspiration_surface)
                 
                 # The infiltration happens only in the region that is used by the channel and therefore this factor should be accounted for
                 pot_channel_infiltation = pot_channel_infiltation * channel_rat  # is in m/s
@@ -228,7 +228,7 @@ class mainModel:
                     gw_s         = gw_s - seepage/self.porosity
                     
                     # Get the maximum value of the discharge raster (to limit the amount of tasks created by HPX)
-                    q_max_value = lfr.maximum(discharge).get()
+                    q_max_value = lfr.minimum(lfr.zonal_sum(discharge, self.ldd == 5)).get()
                     print(q_max_value)
                     
                     # Write value to csv for later validation
@@ -272,7 +272,7 @@ if lfr.on_root_locality():
     report        = Report(configuration)
     main = mainModel(configuration)
     main.dynamic_model(configuration, report)
-    report.balance_report()  
+    report.balance_report(configuration)  
     
     # Process the results into a gif
     if configuration.generalSettings['makeGIF'] == 'True':

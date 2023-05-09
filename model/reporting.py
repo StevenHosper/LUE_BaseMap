@@ -52,17 +52,17 @@ class Report:
         end_date = end_date - datetime.timedelta(minutes=1)
         
         ini_sur_stor = self.tiff_to_np_sum(dir + "/{}_height_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M")))
-        iniGroStor = dir + "/{}_Sgw_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M"))
+        ini_gro_stor = dir + "/{}_Sgw_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M"))
         ini_int_stor = self.tiff_to_np_sum(dir + "/{}_interceptionStorage_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M")))
         end_sur_stor = self.tiff_to_np_sum(dir + "/{}_height_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M")))
-        endGroStor = dir + "/{}_Sgw_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M"))
+        end_gro_stor = dir + "/{}_Sgw_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M"))
         end_int_stor = self.tiff_to_np_sum(dir + "/{}_interceptionStorage_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M")))
         
         resolution = (int(configuration.modelSettings["resolution"]))
         cell_area   = resolution ** 2
         
         del_sur_stor = (end_sur_stor - ini_sur_stor) * resolution
-        del_gro_stor = self.tiff_to_np_sum_difference(endGroStor, iniGroStor) * float(configuration.modelSettings["porosity"])
+        del_gro_stor = self.tiff_to_np_sum_difference(end_gro_stor, ini_gro_stor) * float(configuration.modelSettings["porosity"])
         del_int_stor = (end_int_stor - ini_int_stor)
         net_balance = del_sur_stor + del_int_stor + del_gro_stor
         precipitation       = (((end_IDX - start_IDX) / 12) * mean_Precipitation) / 1000 * cell_area * (int(configuration.modelSettings["arrayExtent"]) ** 2) * (float(configuration.modelSettings["validCellsPercentage"]))/100
