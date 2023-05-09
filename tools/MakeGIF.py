@@ -1,7 +1,5 @@
 #!/usr/bin/env python
-import docopt
 import imageio.v2 as iio
-import matplotlib as mpl
 import matplotlib.pyplot as plt
 import matplotlib.colors as colors
 import numpy as np
