@@ -9,10 +9,12 @@ import datetime
 import numpy as np
 from osgeo import gdal
 import pandas as pd
+from StandardArraysLUE import StandardArraysLUE
 
 # Reporting for the HydrologicBaseModel
 class Report:
     def __init__(self, configuration):
+        self.standard_LUE   = StandardArraysLUE(configuration)
         self.timestep = configuration.modelSettings['timestep']
         self.output_dir = configuration.generalSettings['outputDir'] + configuration.generalSettings["scenario"]
         self.input_dir   = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
@@ -41,7 +43,7 @@ class Report:
         else:
             mean_precipitation = 0
             start_idx = 0
-            end_idx   = 1
+            end_idx   = (end_date - start_date).total_seconds() / 300
         
         if configuration.generalSettings['includeEvapotranspiration'] == "True":
             e = pd.read_csv(configuration.generalSettings["inputDir"] + configuration.dataSettings["evapotranspirationData"], names=["date", "e"])
@@ -53,9 +55,22 @@ class Report:
         
         end_date = end_date - datetime.timedelta(minutes=1)
         
-        ini_sur_stor = self.tiff_to_np_sum(self.input_dir + configuration.dataSettings["iniWaterHeight"])
-        ini_gro_stor = self.input_dir + configuration.dataSettings['iniGroundWaterStorage']
-        ini_int_stor = self.tiff_to_np_sum(self.input_dir + configuration.dataSettings['iniInterceptionStorage'])
+        # Load initial files, if they cannot be loaded, assume zero (same as model does)
+        try:
+            ini_sur_stor = self.tiff_to_np_sum(self.input_dir + configuration.dataSettings["iniWaterHeight"])
+        except:
+            self.standard_LUE.zero()
+        
+        try:
+            ini_gro_stor = self.input_dir + configuration.dataSettings['iniGroundWaterStorage']
+        except:
+            self.standard_LUE.zero()
+        
+        try:
+            ini_int_stor = self.tiff_to_np_sum(self.input_dir + configuration.dataSettings['iniInterceptionStorage'])
+        except:
+            self.standard_LUE.zero()
+            
         end_sur_stor = self.tiff_to_np_sum(self.output_dir + "/{}_height_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M")))
         end_gro_stor = self.output_dir + "/{}_gw_s_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M"))
         end_int_stor = self.tiff_to_np_sum(self.output_dir + "/{}_int_s_{}.tiff".format(int(configuration.modelSettings["timestep"]), end_date.strftime("%Y-%m-%d-%H%M")))

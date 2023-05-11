@@ -19,6 +19,7 @@ from reporting import Report
 from StandardArraysLUE import StandardArraysLUE
 from RetrieveData import RetrieveData
 from CalculateFlux import CalculateFlux
+from utilityFunctionsHBM import utilityFunctions
 
 # Other tools
 import tools.MakeGIF
@@ -115,10 +116,8 @@ class mainModel:
     @lfr.runtime_scope
     def dynamic_model(self, configuration, report):
         dt = int(configuration.modelSettings['iterationsBeforeReport'])
-        sD = list(map(int, configuration.modelSettings['startDate'].split(", ")))
-        eD = list(map(int, configuration.modelSettings['endDate'].split(", ")))
-        start_date   = datetime.datetime(sD[0], sD[1], sD[2], sD[3], sD[4], sD[5])
-        end_date     = datetime.datetime(eD[0], eD[1], eD[2], eD[3], eD[4], eD[5])
+        start_date   = utilityFunctions.string_to_datetime(configuration.modelSettings['startDate'], ", ")
+        end_date     = utilityFunctions.string_to_datetime(configuration.modelSettings['endDate'], ", ")
         dT = int((end_date - start_date).seconds / dt)
         
         # Loading initial conditions
