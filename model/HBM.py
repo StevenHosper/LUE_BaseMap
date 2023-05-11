@@ -82,7 +82,7 @@ class mainModel:
         self.slope          	        = lfr.slope(self.dem, self.resolution)
         self.slope_sqrd                 = utilityFunctions.calculate_sqrd_slope(self.slope, 0.05, 0.00001)
         self.channel_width              = 1
-        self.coefficient                = self.mannings / (self.slope_sqrd * self.width)
+        self.coefficient                = self.mannings / (self.slope_sqrd * self.channel_width)
         self.imperm_below_dem           = float(configuration.modelSettings['impermeableLayerBelowDEM'])
         self.imperm_lay_height          = self.dem - self.imperm_below_dem
         self.water_below_dem            = float(configuration.modelSettings['waterBelowDEM'])
@@ -93,7 +93,7 @@ class mainModel:
         
         # Channel length and area
         self.channel_length      = self.resolution * self.standard_LUE.one()
-        self.channel_area        = self.width * self.channel_length
+        self.channel_area        = self.channel_width * self.channel_length
         self.channel_rat         = self.channel_area / self.cell_area
         self.infil_to_gw_s       = self.channel_area / self.porosity
         # self.notBoundaryCells       = generate.boundaryCell() # Currently not working
@@ -155,7 +155,7 @@ class mainModel:
                                     self.alpha, self.beta, self.timestep,\
                                     self.channel_length)
         
-        height = lfr.pow(self.constants.coefficient*discharge, 0.6)
+        height = lfr.pow(self.coefficient*discharge, 0.6)
         
         # Any water that is moved from groundwater to discharge has to be removed from the groundwaterStorage
         gw_s         = gw_s - (seepage / self.porosity)
