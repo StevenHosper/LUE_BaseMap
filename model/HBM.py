@@ -127,9 +127,7 @@ class mainModel:
         gw_height   = self.imperm_lay_height + gw_s/self.cell_area
         
         # Values for discharge to height calculation
-        slope_sqrd  = lfr.sqrt(self.slope)
-        slope_sqrd  = lfr.where(slope_sqrd < 0.001, 0.001, slope_sqrd)
-        slope_sqrd  = lfr.where(slope_sqrd > 0.05, 0.05, slope_sqrd)
+        slope_sqrd  = utilityFunctions.calculate_sqrd_slope(self.slope, 0.05, 0.00001)
         width       = 1
         coefficient = self.mannings / (slope_sqrd * width)
         
