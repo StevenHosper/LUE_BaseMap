@@ -53,7 +53,9 @@ class RetrieveData():
         
         # When the ID of the table meets an ID within the partitioned array, assign value
         for count, ID in enumerate(ID):
-            Ks = lfr.where(soil_type == ID, Ks_value[count], Ks) / 86400      # To m/s 
+            Ks = lfr.where(soil_type == ID, Ks_value[count], Ks)     # To m/s
+        
+        Ks = Ks / 86400 
         return Ks, porosity, wilting_point
     
     def land_characteristics_csv(self, data_file, land_use):

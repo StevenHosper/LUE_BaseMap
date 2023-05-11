@@ -74,13 +74,13 @@ class mainModel:
         self.ldd        = lfr.from_gdal(self.input_dir + configuration.dataSettings['ldd'], partition_shape)
         # Set constants
         self.resolution                 = float(configuration.modelSettings['resolution'])
-        self.cell_area                   = self.resolution * self.resolution
+        self.cell_area                  = self.resolution * self.resolution
         self.slope          	        = lfr.slope(self.dem, self.resolution)
-        self.imperm_below_dem   = float(configuration.modelSettings['impermeableLayerBelowDEM'])
-        self.imperm_lay_height     = self.dem - self.imperm_below_dem
-        self.water_below_dem              = float(configuration.modelSettings['waterBelowDEM'])
-        self.max_gw_s                     = self.imperm_below_dem * self.cell_area            # Full storage of porosity
-        self.min_gw_s                     = self.max_gw_s * (self.wilting_point / self.porosity)        # Minimum storage because of wilting point
+        self.imperm_below_dem           = float(configuration.modelSettings['impermeableLayerBelowDEM'])
+        self.imperm_lay_height          = self.dem - self.imperm_below_dem
+        self.water_below_dem            = float(configuration.modelSettings['waterBelowDEM'])
+        self.max_gw_s                   = self.imperm_below_dem * self.cell_area            # Full storage of porosity
+        self.min_gw_s                   = self.max_gw_s * (self.wilting_point / self.porosity)        # Minimum storage because of wilting point
         # self.notBoundaryCells       = generate.boundaryCell() # Currently not working
         
         # Load initial groundWaterStorage, if no raster is supplied, use the waterBelowDEM in combination with DEM to create a initialGroundWaterStorage layer.
@@ -88,8 +88,9 @@ class mainModel:
             self.ini_gw_s   = lfr.from_gdal(self.input_dir + configuration.dataSettings['iniGroundWaterStorage'], partition_shape)
         except:
             print("Did not find a initial groundwater height file, looked at: {}".format(configuration.dataSettings['iniGroundWaterStorage']))
-            self.ini_gw_s   = lfr.where(self.dem > self.gw_base + self.water_below_dem, ((self.dem - self.water_below_dem) - self.imperm_lay_height)/self.cell_area,
-                                                    (self.gw_base - self.imperm_lay_height)/self.cell_area)
+            self.ini_gw_s   = lfr.where(self.dem > (self.gw_base + self.water_below_dem),
+                                        ((self.dem - self.water_below_dem)-self.imperm_lay_height) * self.cell_area,
+                                        (self.gw_base - self.imperm_below_dem) * self.cell_area)
             self.ini_gw_s   = lfr.where(self.ini_gw_s > self.max_gw_s, self.max_gw_s, self.ini_gw_s)
         
         # Load initial discharge, if no raster is supplied, set to zero.
@@ -108,6 +109,8 @@ class mainModel:
 
         print("\n")
         
+    def update_and_route(self):
+        pass
 
     @lfr.runtime_scope
     def dynamic_model(self, configuration, report):
@@ -132,10 +135,10 @@ class mainModel:
         coefficient = self.mannings / (slope_sqrd * width)
         
         # Channel length and area
-        channel_length       = self.resolution * self.standard_LUE.one()
-        channel_area         = width * channel_length
-        channel_rat        = channel_area / self.cell_area
-        infil_to_gw_s    = channel_area / self.porosity
+        channel_length      = self.resolution * self.standard_LUE.one()
+        channel_area        = width * channel_length
+        channel_rat         = channel_area / self.cell_area
+        infil_to_gw_s       = channel_area / self.porosity
         
         # Refactorings value from mm/hour to m/h times the cell area.
         refactor            = (self.cell_area / 1000) / 3600         
@@ -188,10 +191,10 @@ class mainModel:
                 pot_channel_infiltation = pot_channel_infiltation * channel_rat  # is in m/s
 
                 # Groundwater LDD, gradient and flow flux
-                gw_ldd       = lfr.d8_flow_direction(gw_height)
+                gw_ldd          = lfr.d8_flow_direction(gw_height)
                 del_h_gw        = gw_height - lfr.downstream(gw_ldd, gw_height)
-                gw_grad  = (del_h_gw) / self.resolution
-                gw_flow         = self.Ks * gw_grad * timestep * (gw_height - self.imperm_lay_height) * self.resolution                       # Groundwater velocity in m/s
+                gw_grad         = (del_h_gw) / self.resolution
+                gw_flow         = self.Ks * gw_grad * timestep * (gw_height - self.imperm_lay_height) * self.resolution                       # Groundwater velocity in m2/s
                 
                 # If the groundwater flow because of the impermeable layer is larger than the amount of water available, than it should be set so only the stored water will move.
                 gw_flow         = lfr.where(gw_flow * dt > gw_s - self.min_gw_s, (gw_s - self.min_gw_s)/dt, gw_flow)
@@ -204,7 +207,7 @@ class mainModel:
                 for j in range(dt):
                     # The groundwater is adjusted by the fluxes
                     # channel_infiltation = lfr.where(height > pot_channel_infiltation, pot_channel_infiltation, height)
-                    gw_s         = gw_s + gw_flux                                      #+ channel_infiltation*infil_to_gw_s                                                                 
+                    gw_s         = gw_s + gw_flux                                #+ channel_infiltation*infil_to_gw_s                                                                 
                     
                     # If the groundwater table surpases the digital elevation map, groundwater is turned into runoff.
                     seepage     = lfr.where(gw_s > self.max_gw_s, (gw_s - self.max_gw_s)*self.porosity, 0)
@@ -225,21 +228,22 @@ class mainModel:
                     height = lfr.pow(coefficient*discharge, 0.6)
                     
                     # Any water that is moved from groundwater to discharge has to be removed from the groundwaterStorage
-                    gw_s         = gw_s - seepage/self.porosity
+                    gw_s         = gw_s - (seepage / self.porosity)
                     
                     # Get the maximum value of the discharge raster (to limit the amount of tasks created by HPX)
-                    q_max_value = lfr.minimum(lfr.zonal_sum(discharge, self.ldd == 5)).get()
-                    print(q_max_value)
+                    outflow = lfr.minimum(lfr.zonal_sum(discharge, self.ldd == 5)).get()
+                    print("outflow: ", outflow)
                     
                     # Write value to csv for later validation
-                    writer.writerow([i*60 + j, q_max_value])
+                    writer.writerow([i*60 + j, outflow])
                 
                 # Adjust the GW Table for the LDD creation of the next timestep.
                 gw_height = self.imperm_lay_height + gw_s/self.cell_area
                 
                 # Save / Report data
                 print(f"Done: {i+1}/{dT}")
-                variables = {"discharge": discharge, "int_s": int_s, "height": height, "gw_s": gw_s}
+                variables = {"discharge": discharge, "int_s": int_s, "height": height, "gw_s": gw_s,
+                             }
                 report.dynamic(date, variables)   
         return 0
 
