@@ -79,6 +79,7 @@ class mainModel:
         ## GENERAL ##
         self.resolution                 = float(configuration.modelSettings['resolution'])
         self.cell_area                  = self.resolution * self.resolution
+        self.stdmin                     = float(configuration.modelSettings['standard_minimal_value'])
         self.slope          	        = lfr.slope(self.dem, self.resolution)
         self.slope_sqrd                 = utilityFunctions.calculate_sqrd_slope(self.slope, 0.05, 0.00001)
         self.channel_width              = 1
@@ -105,7 +106,7 @@ class mainModel:
         self.c           = 5/3
 
         # Static, really small value because inflow = 0 is not accepted
-        self.inflow = self.standard_LUE.one()*1E-20
+        self.inflow = self.standard_LUE.one()*self.stdmin
         
         
         # Load initial groundWaterStorage, if no raster is supplied, use the waterBelowDEM in combination with DEM to create a initialGroundWaterStorage layer.
@@ -148,7 +149,7 @@ class mainModel:
         discharge = lfr.pow(height, self.c) / self.coefficient
         
         # Because the kinematic wave has difficulties working with zero's, we have opted for a very small value. This will impact model results.
-        discharge   = lfr.where(discharge < 1E-20, 1E-20, discharge)
+        discharge   = lfr.where(discharge < self.stdmin, self.stdmin, discharge)
 
         # Water routing based on the kinematic wave function, currently alpha is a float. Hopefully mannings raster can be used in the future.
         discharge           = lfr.kinematic_wave(self.ldd, discharge, self.inflow,\
@@ -165,10 +166,8 @@ class mainModel:
     @lfr.runtime_scope
     def dynamic_model(self, configuration, report):
         dt = int(configuration.modelSettings['iterationsBeforeReport'])
-        sD = list(map(int, configuration.modelSettings['startDate'].split(", ")))
-        eD = list(map(int, configuration.modelSettings['endDate'].split(", ")))
-        start_date   = datetime.datetime(sD[0], sD[1], sD[2], sD[3], sD[4], sD[5])
-        end_date     = datetime.datetime(eD[0], eD[1], eD[2], eD[3], eD[4], eD[5])
+        start_date   = utilityFunctions.string_to_datetime(configuration.modelSettings['startDate'], ", ")
+        end_date     = utilityFunctions.string_to_datetime(configuration.modelSettings['endDate'], ", ")
         dT = int((end_date - start_date).total_seconds() / dt)
         
         # Loading initial conditions
@@ -223,13 +222,15 @@ class mainModel:
                 
                 # If the groundwater flow because of the impermeable layer is larger than the amount of water available, than it should be set so only the stored water will move.
                 gw_flow         = lfr.where(gw_flow * dt > gw_s - self.min_gw_s, (gw_s - self.min_gw_s)/dt, gw_flow)
-                gw_flow         = lfr.where(gw_s < self.min_gw_s, 1E-20, gw_flow)
+                gw_flow         = lfr.where(gw_s < self.min_gw_s, self.stdmin, gw_flow)
                 
                 # Add all vertical processes for the surfacewater and all processes groundwater
                 gw_flux      = ((direct_infiltration - evapotranspiration_soil)/self.porosity) + lfr.upstream(gw_ldd, gw_flow) - gw_flow          # Is now in cubic meters
                 sw_flux      =  precipitation - evapotranspiration_surface - direct_infiltration                                         # Is now in cubic meters
                 
                 for j in range(dt):
+                    # Use the gw_flux and sw_flux to adjust the surface- and groundwater height accordingly
+                    # Then route the water lateraly and repeat this for the amount of iterations required.
                     height, discharge, gw_s = self.update_and_route(gw_s, gw_flux, height, sw_flux)
                     
                     # Get the maximum value of the discharge raster (to limit the amount of tasks created by HPX)
