@@ -81,7 +81,7 @@ class mainModel:
         self.resolution                 = float(configuration.modelSettings['resolution'])
         self.cell_area                  = self.resolution * self.resolution
         self.stdmin                     = float(configuration.modelSettings['standard_minimal_value'])
-        self.slope          	        = lfr.slope(self.dem, self.resolution)
+        self.slope          	        = self.standard_LUE.one() * 0.008
         self.slope_sqrd                 = utilityFunctions.calculate_sqrd_slope(self.slope, 0.05, 0.00001)
         self.channel_width              = int(configuration.modelSettings['channel_width'])
         self.coefficient                = self.mannings / (0.008 * self.channel_width)
@@ -92,6 +92,7 @@ class mainModel:
         self.min_gw_s                   = self.max_gw_s * (self.wilting_point / self.porosity)          # Minimum storage because of wilting point
         # Refactorings value from mm/hour to m/h times the cell area.
         self.refactor                   = (self.cell_area / 1000) / 3600 
+        self.d                          = (5**(2/3))/(4**(2/3))
         
         # Channel length and area
         self.channel_length      = self.resolution * self.standard_LUE.one()
@@ -124,7 +125,7 @@ class mainModel:
             self.ini_sur_h           = lfr.from_gdal(self.input_dir + configuration.dataSettings['iniWaterHeight'], partition_shape)
         except:
             print("Did not find a initial discharge file, looked at: {}".format(configuration.dataSettings['iniWaterHeight']))
-            self.ini_sur_h           = lfr.where(self.dem > 0, self.standard_LUE.zero(), self.standard_LUE.zero())
+            self.ini_sur_h           = lfr.where(self.dem > 0, self.standard_LUE.one() * 0.0001, self.standard_LUE.zero())
         
         # Initial InterceptionStorage and groundWaterStorage
         try:
@@ -151,7 +152,9 @@ class mainModel:
         # Discharge is affected by the surfacewater fluxes, and seepage is added
         height   = height + ((sw_flux + seepage)/self.channel_area)            #- channel_infiltation
         
-        discharge = lfr.pow(height, self.c) / self.coefficient
+        #discharge = lfr.pow(height, self.c) / self.coefficient
+        
+        discharge = self.height_to_dis(height)
         
         # Because the kinematic wave has difficulties working with zero's, we have opted for a very small value. This will impact model results.
         discharge   = lfr.where(discharge < self.stdmin, self.stdmin, discharge)
@@ -161,7 +164,9 @@ class mainModel:
                                     self.alpha, self.beta, self.timestep,\
                                     self.channel_length)
         
-        height = lfr.pow(self.coefficient*discharge, 0.6)
+        height = self.dis_to_height(discharge)
+        
+        #height = lfr.pow(self.coefficient*discharge, 0.6)
         
         # Any water that is moved from groundwater to discharge has to be removed from the groundwaterStorage
         gw_s         = gw_s - (seepage / self.porosity)
@@ -172,7 +177,9 @@ class mainModel:
         # Discharge is affected by the surfacewater fluxes, and seepage is added
         height   = height + ((sw_flux)/self.channel_area)            #- channel_infiltation
         
-        discharge = lfr.pow(height, self.c) / self.coefficient
+        #discharge = lfr.pow(height, self.c) / self.coefficient
+        
+        discharge = self.height_to_dis(height)
         
         # Because the kinematic wave has difficulties working with zero's, we have opted for a very small value. This will impact model results.
         discharge   = lfr.where(discharge < self.stdmin, self.stdmin, discharge)
@@ -182,7 +189,9 @@ class mainModel:
                                     self.alpha, self.beta, self.timestep,\
                                     self.channel_length)
         
-        height = lfr.pow(self.coefficient*discharge, 0.6)
+        #height = lfr.pow(self.coefficient*discharge, 0.6)
+        
+        height = self.dis_to_height(discharge)
         
         # Any water that is moved from groundwater to discharge has to be removed from the groundwaterStorage
         return height, discharge
@@ -200,12 +209,44 @@ class mainModel:
         
         return gw_s, seepage
     
+    def dis_to_height(self, discharge):
+        """Use the open channel flow formula to convert discharge to height
+        
+        The Open Channel Flow calculation for rectangular channels using the known width, slope and mannings.
+        
+        Args:
+            discharge (lue partitioned array): discharge array that is a result of the kinematic wave formule.
+        
+        Returns:
+            height (lue partitioned array): height array that can be used to add vertical and lateral in- and outflows.       
+        
+        """
+        height = (1/self.d)*self.mannings * discharge / self.slope_sqrd
+        
+        return height
+    
+    def height_to_dis(self, height):
+        """Use the open channel flow formula to convert discharge to height
+        
+        The Open Channel Flow calculation for rectangular channels using the known width, slope and mannings.
+        
+        Args:
+            height (lue partitioned array): height array after all in- and outfluxes have been added.
+        
+        Returns:
+            discharge (lue partitioned array): discharge array that can be used as an input for the kinematic wave formula.       
+        
+        """
+        discharge = self.d * (height * self.slope_sqrd)/self.mannings
+        
+        return discharge
+    
     @lfr.runtime_scope
     def dynamic_model(self, configuration):
         dt = int(configuration.modelSettings['iterationsBeforeReport'])
         start_date   = utilityFunctions.string_to_datetime(configuration.modelSettings['startDate'], ", ")
         end_date     = utilityFunctions.string_to_datetime(configuration.modelSettings['endDate'], ", ")
-        dT = int((end_date - start_date).total_seconds() / dt)
+        dT = int((end_date - start_date).total_seconds() / (dt*self.timestep))
         
         # Loading initial conditions
         height      = self.ini_sur_h
@@ -262,11 +303,9 @@ class mainModel:
                 gw_flow         = lfr.where(gw_flow * dt > gw_s - self.min_gw_s, (gw_s - self.min_gw_s)/dt, gw_flow)
                 gw_flow         = lfr.where(gw_s < self.min_gw_s, self.stdmin, gw_flow)
                 gw_flow         = lfr.where(gw_ldd == 5, self.standard_LUE.zero(), 0.000001)
-                
-                out_flow = gw_flow
-                in_flow  = lfr.upstream(gw_ldd, gw_flow)
+
                 # Add all vertical processes for the surfacewater and all processes groundwater
-                gw_flux      =  in_flow - out_flow
+                gw_flux      =  lfr.upstream(gw_ldd, gw_flow) - gw_flow
                 sw_flux      =  precipitation - evapotranspiration_surface - direct_infiltration                                         # Is now in cubic meters
                 
                 
@@ -307,7 +346,6 @@ class mainModel:
                         
                         outflow = lfr.maximum(lfr.zonal_sum(seepage, self.dem>0)).get()
                         total_volume = lfr.minimum(lfr.zonal_sum(gw_s, self.dem>0)).get()
-                        print("outflow: ", outflow, "total_volume: ", total_volume)
                         
                         # Write value to csv for later validation
                         writer.writerow([i*60 + j, outflow])
@@ -320,8 +358,6 @@ class mainModel:
                 
                 # Adjust the GW Table for the LDD creation of the next timestep.
                 gw_height = self.imperm_lay_height + gw_s/self.cell_area
-                
-                
                 
                 
                 # Save / Report data

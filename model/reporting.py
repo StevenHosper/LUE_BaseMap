@@ -65,7 +65,7 @@ class Report:
             ini_sur_height = self.tiff_to_np_sum(self.input_dir + configuration.dataSettings["iniWaterHeight"])
         except:
             ini_sur_height = self.tiff_to_np_sum(self.output_dir + "/{}_ini_sur_h.tiff".format(int(configuration.modelSettings["timestep"])))
-            ini_sur_height = self.tiff_to_np_sum(self.output_dir + "/{}_height_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M")))
+            #ini_sur_height = self.tiff_to_np_sum(self.output_dir + "/{}_height_{}.tiff".format(int(configuration.modelSettings["timestep"]), start_date.strftime("%Y-%m-%d-%H%M")))
         
         try:
             ini_gro_stor = self.input_dir + configuration.dataSettings['iniGroundWaterStorage']
