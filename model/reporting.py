@@ -15,7 +15,8 @@ from StandardArraysLUE import StandardArraysLUE
 class Report:
     def __init__(self, configuration):
         self.standard_LUE   = StandardArraysLUE(configuration)
-        self.timestep = configuration.modelSettings['timestep']
+        self.timestep = int(configuration.modelSettings['timestep'])
+        self.iterations = int(configuration.modelSettings['iterationsBeforeReport'])
         self.output_dir = configuration.generalSettings['outputDir'] + configuration.generalSettings["scenario"]
         self.input_dir   = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
     
@@ -58,7 +59,7 @@ class Report:
         else:
             mean_evapotranspiration = 0
         
-        end_date = end_date - datetime.timedelta(minutes=1)
+        end_date = end_date - datetime.timedelta(seconds=self.iterations * self.timestep)
         
         # Load initial files, if they cannot be loaded, assume zero (same as model does)
         try:
