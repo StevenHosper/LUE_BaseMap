@@ -43,6 +43,7 @@ class RetrieveData():
         Ks = self.std_arr_lue.one() * 0.05
         porosity = self.std_arr_lue.one() * 0.35
         wilting_point = self.std_arr_lue.one() * 0.15
+        k = self.std_arr_lue.one() * 1.6
         
         # Read pandas data table
         data_table = pd.read_csv(data_file)
@@ -50,24 +51,28 @@ class RetrieveData():
         # Split into ID and Ks value
         ID = data_table["ID"]
         Ks_value = data_table["Ks"]
+        Ki_value = data_table["Ki"]
         
         # When the ID of the table meets an ID within the partitioned array, assign value
         for count, ID in enumerate(ID):
             Ks = lfr.where(soil_type == ID, Ks_value[count], Ks)     # To m/s
+            Ki = lfr.where(soil_type == ID, Ki_value[count], Ki)
         
+        Ki = Ki / 86400
         Ks = Ks / 86400 
-        return Ks, porosity, wilting_point
+        return Ks, porosity, wilting_point, Ki, k
     
-    def land_characteristics_csv(self, data_file, land_use):
+    def land_characteristics_csv(self, data_file, land_use, cell_area):
         """Reads the land characteristics from a csv file
         
         Gives standard values to the entire array using the set array extent.
         Continues to read values from data file to the corresponding map IDs.
         
         Args:
-            data_file (path):    the path to the csv data file containing the land characteristics information
-            land_use (lpa*):     array containing the id that matches every cell to its \
+            data_file (path):   the path to the csv data file containing the land characteristics information
+            land_use (lpa*):    array containing the id that matches every cell to its \
                                 corresponding characteristic values.
+            cell_area ():       cell size
                 
         Returns:
             mannings (lpa*):                    Mannings Coefficient in a lue array
@@ -106,6 +111,8 @@ class RetrieveData():
             throughfall_fraction        = lfr.where(land_use == ID, throughfall_fraction_value[count], throughfall_fraction)
             # crop_factor                = lfr.where(land_use == ID, crop_factor_value[count], crop_factor)
                 
+        interception_storage_max = interception_storage_max * cell_area
+        
         return mannings, permeability, interception_storage_max, throughfall_fraction
     
     def rounddown_datetime(self, dt):

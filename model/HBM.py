@@ -65,7 +65,7 @@ class mainModel:
         self.cell_area                  = self.resolution * self.resolution
         
         # Retrieve the soil properties
-        self.Ks, self.porosity, self.wilting_point = self.retrieve_data.soil_csv(
+        self.Ks, self.porosity, self.wilting_point, self.Ki, self.k = self.retrieve_data.soil_csv(
             configuration.generalSettings['inputDir'] + configuration.dataSettings['soilData'], soil_type)               # soil characteristic
         
         # Retrieve the land-use properties
@@ -293,9 +293,19 @@ class mainModel:
                 evapotranspiration_surface, evapotranspiration_soil = self.calculate_flux.evapotranspiration(precipitation,
                                                                                                              evapotranspiration_surface)
                 
-                direct_infiltration = self.calculate_flux.infiltration(gw_s,
+                """ direct_infiltration = self.calculate_flux.infiltration(gw_s,
                                                                        self.max_gw_s,
                                                                        self.Ks,
+                                                                       self.permeability,
+                                                                       self.porosity,
+                                                                       precipitation,
+                                                                       evapotranspiration_surface) """
+                
+                direct_infiltration = self.calculate_flux.adjusted_Horton(gw_s,
+                                                                       self.max_gw_s,
+                                                                       self.Ks,
+                                                                       self.Ki,
+                                                                       self.k,
                                                                        self.permeability,
                                                                        self.porosity,
                                                                        precipitation,
