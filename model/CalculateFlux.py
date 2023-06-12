@@ -25,6 +25,7 @@ class CalculateFlux:
         self.include_percolation          = configuration.generalSettings['includePercolation']
         self.ca                           = int(configuration.modelSettings['resolution'])**2
         self.T                            = 0
+        self.k                            = 1.6
         
     
     def interception(self, int_stor, int_stor_max, pre, rev, th_f):
@@ -121,7 +122,7 @@ class CalculateFlux:
         direct_infiltration = lfr.where(enough_water_inf, pot_infiltration, pre - ev_s)             # Either the pot_infiltration will fully infiltrate
         return direct_infiltration                               # or the available water at the surface will.
     
-    def adjusted_Horton(self, sgw, max_sgw, Ks, Ki, k, prm, por, pre, ev_s):
+    def adjusted_Horton(self, sgw, max_sgw, Ks, Ki, prm, por, pre, ev_s):
         """Created a version of the Horton infiltration that deals with dry periods.
         It returns to high infiltration rates over time with a relatively simple function.
         One of the drawbacks is that by using 'time' the intensity does not matter.
@@ -143,17 +144,16 @@ class CalculateFlux:
             infiltration (lpa*): the infiltration rate based on horton (m3/s)
         """
         
-        wet = pre > ev_s
-                
+        wet = lfr.maximum(pre).get() > lfr.maximum(ev_s).get()
+        
+        # Horton infiltration
+        pot_infiltration_hort = Ks + (Ki - Ks)*lfr.pow(self.std_arr_lue.one()*2.71828,(-1*self.k*self.T))
+        pot_infiltration = pot_infiltration_hort * prm * self.ca     # m3 that can infiltrate the soil
+        pot_infiltration = lfr.where((max_sgw -sgw)*por / (self.timestep * self.iterationsData) > pot_infiltration,
+                                        pot_infiltration,
+                                        (max_sgw -sgw)*por / (self.timestep * self.iterationsData)) 
+              
         if wet:
-            # Horton infiltration
-            pot_infiltration_hort = Ks + (Ki - Ks)*2.71828^(-k*self.T)
-            pot_infiltration = pot_infiltration_hort * prm * self.ca     # m3 that can infiltrate the soil
-            pot_infiltration = lfr.where((max_sgw -sgw)*por / (self.timestep * self.iterationsData) > pot_infiltration,
-                                         pot_infiltration,
-                                         (max_sgw -sgw)*por / (self.timestep * self.iterationsData)) 
-            
-            
             # Add time to rainfall event
             self.T = self.T + (self.iterationsData * self.timestep / 3600)
             
@@ -166,6 +166,8 @@ class CalculateFlux:
         else:
             infiltration = self.std_arr_lue.zero()
             self.T = self.T - (self.iterationsData * self.timestep / 3600)
-            self.T = lfr.where(self.T < 0, 0, self.T)
-        
-        return infiltration
+            self.T = max(self.T, 0)    
+            
+        pot_reinfiltration = pot_infiltration - infiltration
+            
+        return infiltration, pot_reinfiltration

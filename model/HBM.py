@@ -65,7 +65,7 @@ class mainModel:
         self.cell_area                  = self.resolution * self.resolution
         
         # Retrieve the soil properties
-        self.Ks, self.porosity, self.wilting_point, self.Ki, self.k = self.retrieve_data.soil_csv(
+        self.Ks, self.porosity, self.wilting_point, self.Ki = self.retrieve_data.soil_csv(
             configuration.generalSettings['inputDir'] + configuration.dataSettings['soilData'], soil_type)               # soil characteristic
         
         # Retrieve the land-use properties
@@ -148,21 +148,17 @@ class mainModel:
         
         print("\n")
         
-    def update_and_route_both(self, gw_s, gw_flux, discharge, sw_flux):
+    def update_and_route_both(self, gw_s, gw_flux, discharge, sw_flux, pot_reinfiltration):
         # The groundwater is adjusted by the fluxes
-        #channel_infiltation = lfr.where(height > pot_channel_infiltation, pot_channel_infiltation, height)
-        gw_s         = gw_s + gw_flux                                #+ channel_infiltation*infil_to_gw_s                                                                 
+        height = lfr.pow(self.coefficient*discharge, 0.6)
+        reinfiltration = lfr.where(height > pot_reinfiltration, pot_reinfiltration, height)
+        gw_s         = gw_s + gw_flux + (reinfiltration / self.porosity)                                                
         
         # If the groundwater table surpases the digital elevation map, groundwater is turned into runoff.
         seepage     = lfr.where(gw_s > self.max_gw_s, (gw_s - self.max_gw_s)*self.porosity, 0)
 
-        
-        # Discharge is affected by the surfacewater fluxes, and seepage is added
-        #height   = height + ((sw_flux + seepage)/self.channel_area)            #- channel_infiltation
-        
-        #discharge = lfr.pow(height, self.c) / self.coefficient
-        
-        #discharge = self.height_to_dis(height)
+        height    = height - reinfiltration
+        discharge = lfr.pow(height, self.c) / self.coefficient
         
         # Because the kinematic wave has difficulties working with zero's, we have opted for a very small value. This will impact model results.
         discharge   = lfr.where(discharge < self.stdmin, self.stdmin, discharge)
@@ -174,14 +170,12 @@ class mainModel:
                                     self.alpha, self.beta, self.timestep,\
                                     self.channel_length)
         
-        #height = self.dis_to_height(discharge)
-        
         height = lfr.pow(self.coefficient*discharge, 0.6)
         
         # Any water that is moved from groundwater to discharge has to be removed from the groundwaterStorage
         gw_s        = gw_s - (seepage / self.porosity)
         
-        return height, discharge, gw_s, seepage
+        return height, discharge, gw_s, seepage, reinfiltration
 
     def update_and_route_surface(self, height, sw_flux):
         # Discharge is affected by the surfacewater fluxes, and seepage is added
@@ -301,11 +295,10 @@ class mainModel:
                                                                        precipitation,
                                                                        evapotranspiration_surface) """
                 
-                direct_infiltration = self.calculate_flux.adjusted_Horton(gw_s,
+                direct_infiltration, pot_reinfiltration = self.calculate_flux.adjusted_Horton(gw_s,
                                                                        self.max_gw_s,
                                                                        self.Ks,
                                                                        self.Ki,
-                                                                       self.k,
                                                                        self.permeability,
                                                                        self.porosity,
                                                                        precipitation,
@@ -333,7 +326,7 @@ class mainModel:
                     for j in range(dt_data):
                         # Use the gw_flux and sw_flux to adjust the surface- and groundwater height accordingly
                         # Then route the water lateraly and repeat this for the amount of iterations required.
-                        height, discharge, gw_s, seepage = self.update_and_route_both(gw_s, gw_flux, discharge, sw_flux)
+                        height, discharge, gw_s, seepage, reinfiltration = self.update_and_route_both(gw_s, gw_flux, discharge, sw_flux, pot_reinfiltration)
                         
                         # Get the maximum value of the discharge raster (to limit the amount of tasks created by HPX)
                         outflow = lfr.minimum(lfr.zonal_sum(discharge, self.ldd == 5)).get()
@@ -342,7 +335,7 @@ class mainModel:
                         # Write value to csv for later validation
                         writer.writerow([i*dt_data + j, outflow])
                         
-                    variables = {"discharge": discharge, "int_s": int_s, "gw_s": gw_s, "seepage": seepage, "infiltration": direct_infiltration
+                    variables = {"discharge": discharge, "int_s": int_s, "gw_s": gw_s, "seepage": seepage, "infiltration": direct_infiltration, "reinfiltration": reinfiltration, "gw_flow": gw_flow
                              }
                         
                 elif configuration.modelSettings['routing'] == 'surface':

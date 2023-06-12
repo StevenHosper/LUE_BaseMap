@@ -40,10 +40,11 @@ class RetrieveData():
         lpa*: lue partitioned array
         """
         # Assign standard values for de Wupsel
-        Ks = self.std_arr_lue.one() * 0.05
+        Ks = self.std_arr_lue.one() * 0.1
         porosity = self.std_arr_lue.one() * 0.35
         wilting_point = self.std_arr_lue.one() * 0.15
         k = self.std_arr_lue.one() * 1.6
+        Ki = self.std_arr_lue.one() * 0.3
         
         # Read pandas data table
         data_table = pd.read_csv(data_file)
@@ -60,7 +61,7 @@ class RetrieveData():
         
         Ki = Ki / 86400
         Ks = Ks / 86400 
-        return Ks, porosity, wilting_point, Ki, k
+        return Ks, porosity, wilting_point, Ki
     
     def land_characteristics_csv(self, data_file, land_use, cell_area):
         """Reads the land characteristics from a csv file
@@ -153,7 +154,7 @@ class RetrieveData():
             data = pd.read_csv(data_file, sep=",", names=['date_time', 'data_value'])
             data.set_index('date_time', inplace=True)
             data_value = data.loc[f'{date_time}']['data_value']
-            data_value = data_value * refactor * self.std_arr_lue.one() # Convert to m/s rate from mm/h
+            data_value = data_value * refactor * self.std_arr_lue.one() # Convert to m3/s rate from mm/h
         except:
             data_value = self.std_arr_lue.zero()
         
