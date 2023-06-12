@@ -15,7 +15,7 @@ class makeGIF:
         pass
     
     def slice_pathname(pathname, idx, date):
-        date = date + datetime.timedelta(minutes=idx)
+        date = date + datetime.timedelta(minutes=15*idx)
         date_time = date.strftime("%Y-%m-%d-%H%M")
         return "{}_{}.tiff".format(pathname, date_time)
 
@@ -34,7 +34,7 @@ class makeGIF:
                 image = rasterio.plot.show(
                     data,
                     ax=axis,
-                    cmap="magma",
+                    cmap="Blues",
                     norm = colors.LogNorm(vmin, vmax),
                 )
 
@@ -44,8 +44,8 @@ class makeGIF:
                     data = np.frombuffer(buffer.getvalue(), dtype=np.uint8)
                     nr_cols, nr_rows = figure.canvas.get_width_height()
                     image = data.reshape(nr_rows, nr_cols, -1)
-
-                writer.append_data(image)
+                
+                writer.append_data(image[50:700][50:700])
                 plt.close()
                 print(f'Processed {i} out of {nr_rasters} rasters.')
 
