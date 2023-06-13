@@ -17,7 +17,7 @@ class Report:
         self.standard_LUE   = StandardArraysLUE(configuration)
         self.timestep = int(configuration.modelSettings['timestep'])
         self.iterations = int(configuration.modelSettings['iterationsBeforeReport'])
-        self.output_dir = configuration.generalSettings['outputDir'] + configuration.generalSettings["scenario"]
+        self.output_dir = configuration.generalSettings['outputDir'] + configuration.generalSettings["scenario"] + " v2"
         self.input_dir   = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
     
     def initial(self, variables):
