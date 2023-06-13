@@ -51,7 +51,7 @@ class mainModel:
         
         # Set directories
         self.input_dir   = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
-        self.output_dir  = configuration.generalSettings['outputDir'] + configuration.generalSettings['scenario']
+        self.output_dir  = configuration.generalSettings['outputDir'] + configuration.generalSettings['scenario'] + " v2"
         
         partition_shape  = 2 * (configuration.modelSettings['partitionExtent'],)
         
@@ -345,8 +345,8 @@ class mainModel:
                         height, discharge = self.update_and_route_surface(height, sw_flux)
                         
                         # Get the maximum value of the discharge raster (to limit the amount of tasks created by HPX)
-                        outflow = lfr.minimum(lfr.zonal_sum(discharge, self.ldd == 5)).get()
-                        total_volume = lfr.minimum(lfr.zonal_sum(height, self.dem>0)).get()
+                        outflow = lfr.minimum(lfr.zonal_sum(discharge, self.ldd == 5))
+                        total_volume = lfr.minimum(lfr.zonal_sum(height, self.dem>0))
                         print("outflow: ", outflow, "total: ", total_volume)
                         
                         # Write value to csv for later validation
@@ -363,7 +363,7 @@ class mainModel:
                         gw_s, seepage = self.update_and_route_subsurface(gw_s, gw_flux)
                         
                         outflow = lfr.maximum(lfr.zonal_sum(seepage, self.dem>0)).get() / self.timestep
-                        total_volume = lfr.minimum(lfr.zonal_sum(gw_s, self.dem>0)).get()
+                        total_volume = lfr.minimum(lfr.zonal_sum(gw_s, self.dem>0))
                         
                         # Write value to csv for later validation
                         writer.writerow([i*60 + j, outflow])
