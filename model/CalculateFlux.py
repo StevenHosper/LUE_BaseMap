@@ -24,7 +24,7 @@ class CalculateFlux:
         self.include_interception         = configuration.generalSettings['includeInterception']
         self.include_percolation          = configuration.generalSettings['includePercolation']
         self.ca                           = int(configuration.modelSettings['resolution'])**2
-        self.T                            = 0
+        self.T                            = self.std_arr_lue.zero()
         self.k                            = 1.6
         
     
@@ -144,7 +144,7 @@ class CalculateFlux:
             infiltration (lpa*): the infiltration rate based on horton (m3/s)
         """
         
-        wet = lfr.maximum(pre).get() > lfr.maximum(ev_s).get()
+        wet = pre > ev_s
         
         # Horton infiltration
         pot_infiltration_hort = Ks + (Ki - Ks)*lfr.pow(self.std_arr_lue.one()*2.71828,(-1*self.k*self.T))
@@ -152,22 +152,19 @@ class CalculateFlux:
         pot_infiltration = lfr.where((max_sgw -sgw)*por / (self.timestep * self.iterationsData) > pot_infiltration,
                                         pot_infiltration,
                                         (max_sgw -sgw)*por / (self.timestep * self.iterationsData)) 
-              
-        if wet:
-            # Add time to rainfall event
-            self.T = self.T + (self.iterationsData * self.timestep / 3600)
+        
+        enough_rain = pre - ev_s > pot_infiltration
+        
+        self.T = lfr.where(wet, self.T + (self.iterationsData * self.timestep / 3600),
+                           self.T - (self.iterationsData * self.timestep / 3600))
+        
+        self.T = lfr.where(self.T < 0, 0, self.T)
+        
+        infiltration1 = lfr.where(enough_rain, pot_infiltration, pre - ev_s)  
+        infiltration2 = lfr.where(infiltration1 < 0, 0, infiltration1)
             
-            # Check if the amount of precipitation available for infiltration is larger than the potential infiltration
-            enough_rain = pre - ev_s > pot_infiltration
+             
             
-            # Calculate actual infiltration
-            infiltration = lfr.where(enough_rain, pot_infiltration, pre - ev_s)  
+        pot_reinfiltration = pot_infiltration - infiltration2
             
-        else:
-            infiltration = self.std_arr_lue.zero()
-            self.T = self.T - (self.iterationsData * self.timestep / 3600)
-            self.T = max(self.T, 0)    
-            
-        pot_reinfiltration = pot_infiltration - infiltration
-            
-        return infiltration, pot_reinfiltration
+        return infiltration2, pot_reinfiltration
