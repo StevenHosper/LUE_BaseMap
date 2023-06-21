@@ -6,8 +6,8 @@ Created on Mon Mar 7 2023
 """
 import lue.framework as lfr
 import datetime
+#from osgeo import gdal
 import numpy as np
-from osgeo import gdal
 import pandas as pd
 from StandardArraysLUE import StandardArraysLUE
 
