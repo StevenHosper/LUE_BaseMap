@@ -149,7 +149,7 @@ class MyModel(lfr.Model):
         self.report.initial(variables)
 
     
-    def update_fluxes(self, gw_s, date, update_timestep):
+    def update_all_fluxes(self, gw_s, date, update_timestep):
         # Load flux and storage values
         precipitation = self.retrieve_data.csv_timeseries_to_flux(self.configuration.generalSettings['inputDir'] +
                                                                   self.configuration.dataSettings['precipitationData'],
@@ -202,10 +202,84 @@ class MyModel(lfr.Model):
         sw_flux      =  precipitation - evapotranspiration_surface - direct_infiltration                                         # Is now in cubic meters
         
         return gw_flux, sw_flux, pot_reinfiltration
-    
-    def report_output(self):
-        pass
-    
+
+    def update_surface_fluxes(self, date):
+        # Load flux and storage values
+        gw_s = self.standard_LUE.one() * 1
+        
+        precipitation = self.retrieve_data.csv_timeseries_to_flux(self.configuration.generalSettings['inputDir'] +
+                                                                  self.configuration.dataSettings['precipitationData'],
+                                                                  self.refactor, date) # m3/s into a cell (refactor incorporates cell area)
+                
+        ref_evaporation = self.retrieve_data.csv_timeseries_to_flux(self.configuration.generalSettings['inputDir'] +
+                                                                    self.configuration.dataSettings['evapotranspirationData'],
+                                                                    self.refactor, date) # m3/s into a cell (refactor incorporates cell area)
+        
+        self.int_s, precipitation, evapotranspiration_surface = self.calculate_flux.interception(self.int_s,
+                                                                                            self.max_int_s,
+                                                                                            precipitation,
+                                                                                            ref_evaporation,
+                                                                                            self.throughfall_frac)
+        
+        evapotranspiration_surface, evapotranspiration_soil = self.calculate_flux.evapotranspiration(precipitation,
+                                                                                                        evapotranspiration_surface)
+        
+        direct_infiltration = self.calculate_flux.infiltration(gw_s,
+                                                                self.max_gw_s,
+                                                                self.Ks,
+                                                                self.permeability,
+                                                                self.porosity,
+                                                                precipitation,
+                                                                evapotranspiration_surface)
+        
+        sw_flux      =  precipitation - evapotranspiration_surface - direct_infiltration                                         # Is now in cubic meters
+        
+        return sw_flux
+
+    def update_subsurface_fluxes(self, gw_s, date, update_timestep):
+        # Load flux and storage values
+        precipitation = self.retrieve_data.csv_timeseries_to_flux(self.configuration.generalSettings['inputDir'] +
+                                                                  self.configuration.dataSettings['precipitationData'],
+                                                                  self.refactor, date) # m3/s into a cell (refactor incorporates cell area)
+                
+        ref_evaporation = self.retrieve_data.csv_timeseries_to_flux(self.configuration.generalSettings['inputDir'] +
+                                                                    self.configuration.dataSettings['evapotranspirationData'],
+                                                                    self.refactor, date) # m3/s into a cell (refactor incorporates cell area)
+        
+        self.int_s, precipitation, evapotranspiration_surface = self.calculate_flux.interception(self.int_s,
+                                                                                            self.max_int_s,
+                                                                                            precipitation,
+                                                                                            ref_evaporation,
+                                                                                            self.throughfall_frac)
+        
+        evapotranspiration_surface, evapotranspiration_soil = self.calculate_flux.evapotranspiration(precipitation,
+                                                                                                        evapotranspiration_surface)
+        
+        direct_infiltration = self.calculate_flux.infiltration(gw_s,
+                                                                self.max_gw_s,
+                                                                self.Ks,
+                                                                self.permeability,
+                                                                self.porosity,
+                                                                precipitation,
+                                                                evapotranspiration_surface)
+        
+        # Groundwater LDD, gradient and flow flux
+        gw_height       = self.imperm_lay_height + self.gw_s / self.cell_area
+        gw_ldd          = lfr.d8_flow_direction(gw_height)
+        del_h_gw        = gw_height - lfr.downstream(gw_ldd, gw_height)
+        gw_grad         = (del_h_gw) / self.resolution
+        gw_flow         = self.Ks * gw_grad * self.timestep * (gw_height - self.imperm_lay_height) * self.resolution                       # Groundwater velocity in m2/s
+        
+        # If the groundwater flow because of the impermeable layer is larger than the amount of water available, than it should be set so only the stored water will move.
+        gw_flow         = lfr.where(gw_flow * update_timestep > gw_s - self.min_gw_s, (gw_s - self.min_gw_s)/update_timestep, gw_flow)
+        gw_flow         = lfr.where(gw_s < self.min_gw_s, self.stdmin, gw_flow)
+        gw_flow         = lfr.where(gw_ldd == 5, self.standard_LUE.zero(), gw_flow)
+
+        # Add all vertical processes for the surfacewater and all processes groundwater
+        gw_flux      =  direct_infiltration - evapotranspiration_soil + lfr.upstream(gw_ldd, gw_flow) - gw_flow
+        
+        return gw_flux
+
     def route_both(self, gw_s, gw_flux, discharge, sw_flux, pot_reinfiltration):
         """Route surface and subsurface.
         
@@ -314,12 +388,13 @@ class MyModel(lfr.Model):
     def simulate(self, time_step):
         date = self.start_date + datetime.timedelta(seconds=time_step)
         
-        # Get new fluxes
-        if time_step % self.update_timestep:
-            self.gw_flux, self.sw_flux, self.pot_reinfiltration = self.update_fluxes(self.gw_s, date, self.update_timestep)
-        
         # Update all variables and route.
         if self.routing == "both":
+            # Get new fluxes
+            if time_step % self.update_timestep:
+                self.gw_flux, self.sw_flux, self.pot_reinfiltration = self.update_all_fluxes(self.gw_s, date, self.update_timestep)
+            
+            
             self.height, self.discharge, self.gw_s, self.seepage, self.reinfiltration = self.route_both(
                                                                                 self.gw_s,
                                                                                 self.gw_flux,
@@ -334,8 +409,9 @@ class MyModel(lfr.Model):
                             }
         
         elif self.routing == 'surface':
-            # Use the gw_flux and sw_flux to adjust the surface- and groundwater height accordingly
-            # Then route the water lateraly and repeat this for the amount of iterations required.
+            if time_step % self.update_timestep:
+                self.gw_flux, self.sw_flux, self.pot_reinfiltration = self.update_surface_fluxes(date)
+            
             self.height, self.discharge = self.update_and_route_surface(self.height,
                                                                         self.sw_flux
                                                                         )
@@ -346,8 +422,9 @@ class MyModel(lfr.Model):
             
             
         elif self.routing == 'subsurface':
-            # Use the gw_flux and sw_flux to adjust the surface- and groundwater height accordingly
-            # Then route the water lateraly and repeat this for the amount of iterations required.
+            if time_step % self.update_timestep:
+                self.gw_flux, self.sw_flux, self.pot_reinfiltration = self.update_subsurface_fluxes(self.gw_s, date, self.update_timestep)
+                
             self.gw_s, self.seepage = self.update_and_route_subsurface(self.gw_s, self.gw_flux)
             
             variables = {"gw_s": self.gw_s, "seepage": self.seepage, 
