@@ -474,7 +474,7 @@ def calculate_timesteps(start_date: str, end_date: str, sep, timestep_size):
 
 @lfr.runtime_scope
 def main():
-    configuration = Configuration("F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/config/config.ini")
+    configuration = Configuration(sys.argv[1])
     report        = Report(configuration)
     model = MyModel(configuration, report)
     progressor = MyProgressor()
