@@ -474,6 +474,8 @@ def calculate_timesteps(start_date: str, end_date: str, sep, timestep_size):
 
 @lfr.runtime_scope
 def main():
+    if len(sys.argv) == 1:
+        sys.exit("Missing configuration file.")
     configuration = Configuration(sys.argv[1])
     report        = Report(configuration)
     model = MyModel(configuration, report)
@@ -486,6 +488,7 @@ def main():
     lfr.run_deterministic(model, progressor, nr_time_steps, rate_limit=15)
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()
+    sys.exit(print("--- %s seconds ---" % (time.time() - start_time)))
 
-print("--- %s seconds ---" % (time.time() - start_time))
+
