@@ -51,7 +51,7 @@ class mainModel:
         
         # Set directories
         self.input_dir   = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
-        self.output_dir  = configuration.generalSettings['outputDir'] + configuration.generalSettings['scenario'] + " v2"
+        self.output_dir  = configuration.generalSettings['outputDir'] + configuration.generalSettings['scenario']
         
         partition_shape  = 2 * (configuration.modelSettings['partitionExtent'],)
         
@@ -126,7 +126,7 @@ class mainModel:
             self.ini_sur_h           = lfr.from_gdal(self.input_dir + configuration.dataSettings['iniWaterHeight'], partition_shape)
         except:
             print("Did not find a initial discharge file, looked at: {}".format(configuration.dataSettings['iniWaterHeight']))
-            self.ini_sur_h           = lfr.where(self.dem > 0, self.standard_LUE.zero(), self.standard_LUE.zero())
+            self.ini_sur_h           = lfr.where(self.dem > 0, self.standard_LUE.one() * 0.001, self.standard_LUE.zero())
             
         try:
             self.ini_dis           = lfr.from_gdal(self.input_dir + configuration.dataSettings['iniDischarge'], partition_shape)
@@ -225,7 +225,7 @@ class mainModel:
             height (lue partitioned array): height array that can be used to add vertical and lateral in- and outflows.       
         
         """
-        height = (1/self.d)*self.mannings * discharge / self.slope_sqrd
+        height = (((2/3) * discharge)**(1/self.beta))/ self.channel_width
         
         return height
     
@@ -241,7 +241,7 @@ class mainModel:
             discharge (lue partitioned array): discharge array that can be used as an input for the kinematic wave formula.       
         
         """
-        discharge = self.d * (height * self.slope_sqrd)/self.mannings
+        discharge = self.alpha * ((self.channel_width * height) ** self.beta)
         
         return discharge
     
@@ -317,7 +317,7 @@ class mainModel:
 
                 # Add all vertical processes for the surfacewater and all processes groundwater
                 gw_flux      =  direct_infiltration - evapotranspiration_soil + lfr.upstream(gw_ldd, gw_flow) - gw_flow
-                sw_flux      =  precipitation - evapotranspiration_surface - direct_infiltration                                         # Is now in cubic meters
+                sw_flux      =  self.standard_LUE.zero()
                 
                 
                 ############## ROUTING AND UPDATE PER TIMESTEP ##############
@@ -345,12 +345,12 @@ class mainModel:
                         height, discharge = self.update_and_route_surface(height, sw_flux)
                         
                         # Get the maximum value of the discharge raster (to limit the amount of tasks created by HPX)
-                        outflow = lfr.minimum(lfr.zonal_sum(discharge, self.ldd == 5))
-                        total_volume = lfr.minimum(lfr.zonal_sum(height, self.dem>0))
+                        outflow = lfr.minimum(lfr.zonal_sum(discharge, self.ldd == 5)).get()
+                        total_volume = lfr.maximum(lfr.zonal_sum(height, height>0)).get()
                         print("outflow: ", outflow, "total: ", total_volume)
                         
                         # Write value to csv for later validation
-                        writer.writerow([i*60 + j, outflow])
+                        writer.writerow([i*60 + j, outflow, total_volume])
                     
                     variables = {"discharge": discharge, "int_s": int_s, "height": height
                              }
@@ -383,7 +383,6 @@ class mainModel:
                 
                 # Save / Report data
                 if i % (dt_report/dt_data) == 0:
-                    print(i)
                     report.dynamic(date, variables)
                 
                 

@@ -6,7 +6,7 @@ Created on Mon Mar 7 2023
 """
 import lue.framework as lfr
 import datetime
-#from osgeo import gdal
+from osgeo import gdal
 import numpy as np
 import pandas as pd
 from StandardArraysLUE import StandardArraysLUE
@@ -17,7 +17,7 @@ class Report:
         self.standard_LUE   = StandardArraysLUE(configuration)
         self.timestep = int(configuration.modelSettings['timestep'])
         self.iterations = int(configuration.modelSettings['iterationsBeforeReport'])
-        self.output_dir = configuration.generalSettings['outputDir'] + configuration.generalSettings["scenario"] + " v2"
+        self.output_dir = configuration.generalSettings['outputDir'] + configuration.generalSettings["scenario"]
         self.input_dir   = configuration.generalSettings['inputDir'] + configuration.generalSettings['scenario'] 
     
     def initial(self, variables):

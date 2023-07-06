@@ -48,7 +48,7 @@ class MyModel(lfr.Model):
         self.standard_LUE   = StandardArraysLUE(configuration)
         self.retrieve_data  = RetrieveData(configuration)
         self.calculate_flux = CalculateFlux(configuration)
-        self.report         = report
+        self.report         = report 
         
     def initialize(self):
         # Set directories
@@ -88,7 +88,7 @@ class MyModel(lfr.Model):
         ## GENERAL ##
         self.routing                    = self.configuration.modelSettings['routing']
         self.start_date                 = utilityFunctions.string_to_datetime(self.configuration.modelSettings['startDate'], ", ")
-        self.stdmin                     = float(self.configuration.modelSettings['standard_minimal_value'])
+        self.stdmin                     = float(self.configuration.modelSettings['standard_minimal_value']) * self.standard_LUE.one()
         slope          	                = self.standard_LUE.one() * 0.008
         self.slope_sqrd                 = utilityFunctions.calculate_sqrd_slope(slope, 0.05, 0.00001)
         self.channel_width              = int(self.configuration.modelSettings['channel_width'])
@@ -387,7 +387,7 @@ class MyModel(lfr.Model):
     
     def simulate(self, time_step):
         date = self.start_date + datetime.timedelta(seconds=time_step)
-        
+            
         # Update all variables and route.
         if self.routing == "both":
             # Get new fluxes
@@ -410,9 +410,9 @@ class MyModel(lfr.Model):
         
         elif self.routing == 'surface':
             if time_step % self.update_timestep:
-                self.gw_flux, self.sw_flux, self.pot_reinfiltration = self.update_surface_fluxes(date)
+                self.sw_flux = self.update_surface_fluxes(date)
             
-            self.height, self.discharge = self.update_and_route_surface(self.height,
+            self.height, self.discharge = self.route_surface(self.height,
                                                                         self.sw_flux
                                                                         )
             
@@ -474,9 +474,7 @@ def calculate_timesteps(start_date: str, end_date: str, sep, timestep_size):
 
 @lfr.runtime_scope
 def main():
-    if len(sys.argv) == 1:
-        sys.exit("Missing configuration file.")
-    configuration = Configuration(sys.argv[1])
+    configuration = Configuration("F:/Projecten intern (2023)/Stage Steven Hosper/Model/v1/config/config.ini")
     report        = Report(configuration)
     model = MyModel(configuration, report)
     progressor = MyProgressor()
@@ -485,7 +483,8 @@ def main():
                                         ", ",
                                         configuration.modelSettings['timestep']
                                         )
-    lfr.run_deterministic(model, progressor, nr_time_steps, rate_limit=15)
+    
+    lfr.run_deterministic(model, progressor, nr_time_steps, rate_limit=5)
 
 if __name__ == "__main__":
     main()

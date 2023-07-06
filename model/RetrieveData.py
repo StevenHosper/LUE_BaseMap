@@ -87,7 +87,7 @@ class RetrieveData():
         # Standard values
         dummy                  = self.std_arr_lue.one()
         permeability           = dummy * 0.8
-        mannings               = dummy * 0.045
+        mannings               = dummy * 0.03
         interception_storage_max = dummy * 0.001
         throughfall_fraction    = dummy * 0.90
         LAI                     = dummy * 0.5
@@ -104,12 +104,12 @@ class RetrieveData():
         crop_factor_value                 = data["Crop_type"]
         
         # When an ID matches the array ID, assign value
-        for count, ID in enumerate(ID):
-            mannings                    = lfr.where(land_use == ID, mannings_friction[count], mannings)
-            permeability                = lfr.where(land_use == ID, permeability_value[count], permeability)
-            interception_storage_max    = lfr.where(land_use == ID, interception_storage_max_value[count], interception_storage_max)
+        #for count, ID in enumerate(ID):
+        #    mannings                    = lfr.where(land_use == ID, mannings_friction[count], mannings)
+        #    permeability                = lfr.where(land_use == ID, permeability_value[count], permeability)
+        #    interception_storage_max    = lfr.where(land_use == ID, interception_storage_max_value[count], interception_storage_max)
             # LAI                       = lfr.where(land_use == ID, LAI_value[count], LAI)
-            throughfall_fraction        = lfr.where(land_use == ID, throughfall_fraction_value[count], throughfall_fraction)
+        #    throughfall_fraction        = lfr.where(land_use == ID, throughfall_fraction_value[count], throughfall_fraction)
             # crop_factor                = lfr.where(land_use == ID, crop_factor_value[count], crop_factor)
                 
         interception_storage_max = interception_storage_max * cell_area
